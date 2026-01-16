@@ -89,7 +89,21 @@ class PaiementController extends Controller
     {
         DB::beginTransaction();
         try {
-            $paiement = Paiement::create($request->validated());
+            $data = $request->validated();
+            
+            // Valeurs par défaut
+            $data['date_paiement'] = $data['date_paiement'] ?? now()->toDateString();
+            $data['statut_paiement'] = $data['statut_paiement'] ?? 'en_attente';
+            $data['reference_transaction'] = $data['reference_transaction'] ?? 'TXN-' . strtoupper(\Illuminate\Support\Str::random(10));
+            
+            // Gérer l'upload de la preuve de paiement
+            if ($request->hasFile('preuve_paiement')) {
+                $file = $request->file('preuve_paiement');
+                $path = $file->store('paiements/preuves', 'public');
+                $data['preuve_paiement'] = $path;
+            }
+            
+            $paiement = Paiement::create($data);
 
             // Si le paiement est validé, générer le quitus
             if ($paiement->statut_paiement === 'valide') {

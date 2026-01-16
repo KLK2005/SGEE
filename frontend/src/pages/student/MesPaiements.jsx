@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useAuthStore } from '../../store/authStore'
+import api from '../../services/api'
 import { paiementService } from '../../services/paiementService'
-import { candidatService } from '../../services/candidatService'
 import toast from 'react-hot-toast'
 import {
   CreditCardIcon,
@@ -10,35 +9,51 @@ import {
   ArrowDownTrayIcon,
   CheckCircleIcon,
   ClockIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline'
 
 export default function MesPaiements() {
-  const { user } = useAuthStore()
   const queryClient = useQueryClient()
-  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [preuvePaiement, setPreuvePaiement] = useState(null)
+  const [montant, setMontant] = useState(50000)
+  const [modePaiement, setModePaiement] = useState('mobile_money')
 
-  const { data: candidatData, isLoading: loadingCandidat } = useQuery({
-    queryKey: ['my-candidat-paiement'],
-    queryFn: () => candidatService.getAll({ utilisateur_id: user?.id }),
+  // Fetch mon candidat
+  const { data: candidatResponse, isLoading: loadingCandidat } = useQuery({
+    queryKey: ['mon-candidat-paiements'],
+    queryFn: async () => (await api.get('/mon-candidat')).data,
   })
 
-  const candidat = candidatData?.data?.[0]
-
-  const { data: paiementsData, isLoading: loadingPaiements } = useQuery({
-    queryKey: ['my-paiements', candidat?.id],
-    queryFn: () => paiementService.getAll({ candidat_id: candidat?.id }),
-    enabled: !!candidat?.id,
+  // Fetch mes paiements
+  const { data: paiementsResponse, isLoading: loadingPaiements } = useQuery({
+    queryKey: ['mes-paiements'],
+    queryFn: async () => (await api.get('/mes-paiements')).data,
   })
 
-  const paiements = paiementsData?.data || []
+  const candidat = candidatResponse?.data
+  const paiements = paiementsResponse?.data || []
 
   const createPaiementMutation = useMutation({
-    mutationFn: paiementService.create,
+    mutationFn: async (data) => {
+      const formData = new FormData()
+      formData.append('candidat_id', data.candidat_id)
+      formData.append('enrolement_id', data.enrolement_id)
+      formData.append('montant', data.montant)
+      formData.append('mode_paiement', data.mode_paiement)
+      formData.append('date_paiement', new Date().toISOString().split('T')[0])
+      if (data.preuve_paiement) {
+        formData.append('preuve_paiement', data.preuve_paiement)
+      }
+      return (await api.post('/paiements', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })).data
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries(['my-paiements'])
-      toast.success('Preuve de paiement soumise !')
-      setShowUploadModal(false)
+      queryClient.invalidateQueries(['mes-paiements'])
+      queryClient.invalidateQueries(['mon-candidat-paiements'])
+      toast.success('Paiement soumis avec succès!')
+      setShowModal(false)
       setPreuvePaiement(null)
     },
     onError: (error) => {
@@ -47,13 +62,13 @@ export default function MesPaiements() {
   })
 
   const handleSubmitPaiement = () => {
-    if (!preuvePaiement || !candidat) return
+    if (!candidat) return
 
     createPaiementMutation.mutate({
       candidat_id: candidat.id,
       enrolement_id: candidat.enrolement?.id,
-      montant: 50000, // Montant fixe ou à récupérer
-      mode_paiement: 'virement',
+      montant: montant,
+      mode_paiement: modePaiement,
       preuve_paiement: preuvePaiement,
     })
   }
@@ -67,6 +82,7 @@ export default function MesPaiements() {
       a.download = `quitus_${paiementId}.pdf`
       a.click()
       window.URL.revokeObjectURL(url)
+      toast.success('Téléchargement réussi')
     } catch (error) {
       toast.error('Erreur lors du téléchargement')
     }
@@ -90,12 +106,15 @@ export default function MesPaiements() {
     )
   }
 
+  const hasPaiementValide = paiements.some(p => p.statut_paiement === 'valide')
+  const hasPaiementEnAttente = paiements.some(p => p.statut_paiement === 'en_attente')
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Mes Paiements</h1>
-        {candidat.enrolement && !paiements.some(p => p.statut_paiement === 'valide') && (
-          <button onClick={() => setShowUploadModal(true)} className="btn-primary">
+        {candidat.enrolement && !hasPaiementValide && !hasPaiementEnAttente && (
+          <button onClick={() => setShowModal(true)} className="btn-primary">
             Soumettre un paiement
           </button>
         )}
@@ -112,6 +131,21 @@ export default function MesPaiements() {
         </div>
       </div>
 
+      {/* Candidat Info */}
+      <div className="card">
+        <h2 className="text-lg font-semibold mb-3">Informations du dossier</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-gray-500">Numéro de dossier</p>
+            <p className="font-semibold">{candidat.numero_dossier}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Nom complet</p>
+            <p className="font-semibold">{candidat.nom} {candidat.prenom}</p>
+          </div>
+        </div>
+      </div>
+
       {/* Payments List */}
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">Historique des paiements</h2>
@@ -120,14 +154,16 @@ export default function MesPaiements() {
           <div className="text-center py-8">
             <ClockIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">Aucun paiement enregistré</p>
+            {!candidat.enrolement && (
+              <p className="text-sm text-orange-600 mt-2">
+                Vous devez d'abord soumettre votre enrôlement
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
             {paiements.map((paiement) => (
-              <div
-                key={paiement.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-              >
+              <div key={paiement.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-4">
                   <div className={`p-2 rounded-lg ${
                     paiement.statut_paiement === 'valide' ? 'bg-green-100' :
@@ -135,16 +171,19 @@ export default function MesPaiements() {
                   }`}>
                     {paiement.statut_paiement === 'valide' ? (
                       <CheckCircleIcon className="w-6 h-6 text-green-600" />
+                    ) : paiement.statut_paiement === 'rejete' ? (
+                      <XCircleIcon className="w-6 h-6 text-red-600" />
                     ) : (
                       <ClockIcon className="w-6 h-6 text-yellow-600" />
                     )}
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">
-                      {paiement.montant?.toLocaleString()} FCFA
+                      {Number(paiement.montant).toLocaleString()} FCFA
                     </p>
                     <p className="text-sm text-gray-500">
-                      {new Date(paiement.date_paiement).toLocaleDateString('fr-FR')}
+                      {paiement.date_paiement ? new Date(paiement.date_paiement).toLocaleDateString('fr-FR') : '-'}
+                      {' • '}{paiement.mode_paiement?.replace('_', ' ')}
                     </p>
                   </div>
                 </div>
@@ -176,36 +215,61 @@ export default function MesPaiements() {
       </div>
 
       {/* Upload Modal */}
-      {showUploadModal && (
+      {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold mb-4">Soumettre une preuve de paiement</h3>
+            <h3 className="text-lg font-semibold mb-4">Soumettre un paiement</h3>
             
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors">
-              <label className="cursor-pointer">
-                <CloudArrowUpIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-600">
-                  {preuvePaiement ? preuvePaiement.name : 'Cliquez pour téléverser'}
-                </p>
+            <div className="space-y-4">
+              <div>
+                <label className="label">Montant (FCFA)</label>
                 <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*,.pdf"
-                  onChange={(e) => setPreuvePaiement(e.target.files[0])}
+                  type="number"
+                  className="input-field"
+                  value={montant}
+                  onChange={(e) => setMontant(e.target.value)}
                 />
-              </label>
+              </div>
+
+              <div>
+                <label className="label">Mode de paiement</label>
+                <select
+                  className="input-field"
+                  value={modePaiement}
+                  onChange={(e) => setModePaiement(e.target.value)}
+                >
+                  <option value="mobile_money">Mobile Money</option>
+                  <option value="virement">Virement bancaire</option>
+                  <option value="espece">Espèces</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="label">Preuve de paiement (optionnel)</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <label className="cursor-pointer">
+                    <CloudArrowUpIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-600 text-sm">
+                      {preuvePaiement ? preuvePaiement.name : 'Cliquez pour téléverser'}
+                    </p>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*,.pdf"
+                      onChange={(e) => setPreuvePaiement(e.target.files[0])}
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="btn-secondary flex-1"
-              >
+              <button onClick={() => setShowModal(false)} className="btn-secondary flex-1">
                 Annuler
               </button>
               <button
                 onClick={handleSubmitPaiement}
-                disabled={!preuvePaiement || createPaiementMutation.isPending}
+                disabled={createPaiementMutation.isPending}
                 className="btn-primary flex-1"
               >
                 {createPaiementMutation.isPending ? 'Envoi...' : 'Soumettre'}

@@ -23,12 +23,13 @@ class PaiementRequest extends FormRequest
     {
         return [
             'candidat_id' => ['required', 'exists:candidats,id'],
-            'enrolement_id' => ['required', 'exists:enrolements,id'],
-            'montant' => ['required', 'integer', 'min:1'],
+            'enrolement_id' => ['nullable', 'exists:enrolements,id'],
+            'montant' => ['required', 'numeric', 'min:1'],
             'mode_paiement' => ['required', 'string', 'in:espece,cheque,virement,mobile_money,carte'],
-            'reference_transaction' => ['required', 'string', 'max:255'],
-            'date_paiement' => ['required', 'date'],
+            'reference_transaction' => ['nullable', 'string', 'max:255'],
+            'date_paiement' => ['nullable', 'date'],
             'statut_paiement' => ['nullable', 'string', 'in:en_attente,valide,rejete'],
+            'preuve_paiement' => ['nullable', 'file', 'max:5120'],
         ];
     }
 }

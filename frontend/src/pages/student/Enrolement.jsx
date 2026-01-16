@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { useAuthStore } from '../../store/authStore'
-import { candidatService } from '../../services/candidatService'
-import { enrolementService } from '../../services/enrolementService'
-import { filiereService } from '../../services/filiereService'
+import api from '../../services/api'
 import toast from 'react-hot-toast'
 import { CloudArrowUpIcon, CheckCircleIcon, DocumentIcon } from '@heroicons/react/24/outline'
 
@@ -17,24 +15,20 @@ export default function Enrolement() {
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm()
 
-  // Fetch existing candidat data for current user
-  const { data: candidatData, isLoading: loadingCandidat, refetch: refetchCandidat } = useQuery({
-    queryKey: ['my-candidat', user?.id],
-    queryFn: async () => {
-      const response = await candidatService.getAll({ utilisateur_id: user?.id })
-      return response
-    },
-    enabled: !!user?.id,
+  // Fetch mon candidat
+  const { data: candidatResponse, isLoading: loadingCandidat, refetch: refetchCandidat } = useQuery({
+    queryKey: ['mon-candidat'],
+    queryFn: async () => (await api.get('/mon-candidat')).data,
   })
 
   // Fetch filieres
-  const { data: filieresData } = useQuery({
+  const { data: filieresResponse } = useQuery({
     queryKey: ['filieres'],
-    queryFn: () => filiereService.getAll(),
+    queryFn: async () => (await api.get('/filieres')).data,
   })
 
-  const candidat = candidatData?.data?.[0] || null
-  const filieres = filieresData?.data || []
+  const candidat = candidatResponse?.data
+  const filieres = filieresResponse?.data || []
 
   // Determine initial step based on candidat status
   useEffect(() => {
@@ -42,40 +36,41 @@ export default function Enrolement() {
       if (candidat.enrolement) {
         setStep(3) // Already enrolled
       } else {
-        setStep(2) // Has candidat, needs documents
+        setStep(2) // Has candidat, needs to submit enrollment
       }
     } else {
       setStep(1) // New user, needs to fill info
     }
   }, [candidat])
 
-  // Create candidat mutation
+  // Create candidat
   const createCandidatMutation = useMutation({
-    mutationFn: candidatService.create,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['my-candidat'])
-      toast.success('Informations enregistrées avec succès!')
+    mutationFn: async (data) => (await api.post('/candidats', data)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries(['mon-candidat'])
+      toast.success('Informations enregistrées!')
       refetchCandidat()
-      setStep(2)
     },
     onError: (error) => {
-      const message = error.response?.data?.message || error.response?.data?.error || 'Erreur lors de l\'enregistrement'
-      toast.error(message)
+      toast.error(error.response?.data?.message || 'Erreur lors de l\'enregistrement')
     },
   })
 
-  // Create enrolement mutation
+  // Create enrolement
   const createEnrolementMutation = useMutation({
-    mutationFn: enrolementService.create,
+    mutationFn: async (formData) => {
+      const response = await api.post('/enrolements', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      return response.data
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries(['my-candidat'])
+      queryClient.invalidateQueries(['mon-candidat'])
       toast.success('Enrôlement soumis avec succès!')
       refetchCandidat()
-      setStep(3)
     },
     onError: (error) => {
-      const message = error.response?.data?.message || error.response?.data?.error || 'Erreur lors de la soumission'
-      toast.error(message)
+      toast.error(error.response?.data?.message || 'Erreur lors de la soumission')
     },
   })
 
@@ -88,18 +83,16 @@ export default function Enrolement() {
 
   const onSubmitStep2 = async () => {
     if (!candidat) {
-      toast.error('Veuillez d\'abord remplir vos informations personnelles')
+      toast.error('Veuillez d\'abord remplir vos informations')
       return
     }
 
     setIsSubmitting(true)
     
     try {
-      // Create FormData with candidat_id and files
       const formData = new FormData()
       formData.append('candidat_id', candidat.id)
       
-      // Add uploaded files
       Object.keys(uploadedFiles).forEach(key => {
         if (uploadedFiles[key]) {
           formData.append(key, uploadedFiles[key])
@@ -116,9 +109,8 @@ export default function Enrolement() {
 
   const handleFileChange = (field, file) => {
     if (file) {
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('Le fichier est trop volumineux (max 5MB)')
+        toast.error('Fichier trop volumineux (max 5MB)')
         return
       }
       setUploadedFiles(prev => ({ ...prev, [field]: file }))
@@ -134,16 +126,14 @@ export default function Enrolement() {
     )
   }
 
-  // If already enrolled, show status
+  // If already enrolled
   if (candidat?.enrolement || step === 3) {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="card text-center">
           <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Enrôlement soumis</h2>
-          <p className="text-gray-600 mb-4">
-            Votre dossier d'enrôlement a été soumis avec succès.
-          </p>
+          <p className="text-gray-600 mb-4">Votre dossier a été soumis avec succès.</p>
           
           {candidat && (
             <>
@@ -157,6 +147,11 @@ export default function Enrolement() {
                 <p className="text-lg font-semibold">{candidat.nom} {candidat.prenom}</p>
               </div>
 
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <p className="text-sm text-gray-500">Filière</p>
+                <p className="text-lg font-semibold">{candidat.filiere?.nom_filiere || '-'}</p>
+              </div>
+
               {candidat.enrolement && (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-sm text-gray-500">Statut</p>
@@ -168,7 +163,7 @@ export default function Enrolement() {
                       : 'bg-yellow-100 text-yellow-800'
                   }`}>
                     {candidat.enrolement.statut_enrolement === 'valide' ? 'Validé' :
-                     candidat.enrolement.statut_enrolement === 'rejete' ? 'Rejeté' : 'En attente de validation'}
+                     candidat.enrolement.statut_enrolement === 'rejete' ? 'Rejeté' : 'En attente'}
                   </span>
                 </div>
               )}
@@ -214,138 +209,79 @@ export default function Enrolement() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="label">Nom *</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Votre nom"
-                  {...register('nom', { required: 'Le nom est requis' })}
-                />
-                {errors.nom && <p className="text-red-500 text-sm mt-1">{errors.nom.message}</p>}
+                <input type="text" className="input-field" {...register('nom', { required: 'Requis' })} />
+                {errors.nom && <p className="text-red-500 text-sm">{errors.nom.message}</p>}
               </div>
               <div>
                 <label className="label">Prénom *</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Votre prénom"
-                  {...register('prenom', { required: 'Le prénom est requis' })}
-                />
-                {errors.prenom && <p className="text-red-500 text-sm mt-1">{errors.prenom.message}</p>}
+                <input type="text" className="input-field" {...register('prenom', { required: 'Requis' })} />
+                {errors.prenom && <p className="text-red-500 text-sm">{errors.prenom.message}</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="label">Date de naissance *</label>
-                <input 
-                  type="date" 
-                  className="input-field" 
-                  {...register('date_naissance', { required: 'La date de naissance est requise' })} 
-                />
-                {errors.date_naissance && <p className="text-red-500 text-sm mt-1">{errors.date_naissance.message}</p>}
+                <input type="date" className="input-field" {...register('date_naissance', { required: 'Requis' })} />
               </div>
               <div>
                 <label className="label">Lieu de naissance *</label>
-                <input 
-                  type="text" 
-                  className="input-field" 
-                  placeholder="Ville de naissance"
-                  {...register('lieu_naissance', { required: 'Le lieu de naissance est requis' })} 
-                />
-                {errors.lieu_naissance && <p className="text-red-500 text-sm mt-1">{errors.lieu_naissance.message}</p>}
+                <input type="text" className="input-field" {...register('lieu_naissance', { required: 'Requis' })} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="label">Sexe *</label>
-                <select className="input-field" {...register('sexe', { required: 'Le sexe est requis' })}>
+                <select className="input-field" {...register('sexe', { required: 'Requis' })}>
                   <option value="">Sélectionner</option>
                   <option value="M">Masculin</option>
                   <option value="F">Féminin</option>
                 </select>
-                {errors.sexe && <p className="text-red-500 text-sm mt-1">{errors.sexe.message}</p>}
               </div>
               <div>
                 <label className="label">Nationalité *</label>
-                <input 
-                  type="text" 
-                  className="input-field" 
-                  placeholder="Ex: Congolaise"
-                  {...register('nationalite', { required: 'La nationalité est requise' })} 
-                />
-                {errors.nationalite && <p className="text-red-500 text-sm mt-1">{errors.nationalite.message}</p>}
+                <input type="text" className="input-field" defaultValue="Congolaise" {...register('nationalite', { required: 'Requis' })} />
               </div>
             </div>
 
             <div>
               <label className="label">Téléphone *</label>
-              <input 
-                type="tel" 
-                className="input-field" 
-                placeholder="+243 XXX XXX XXX"
-                {...register('telephone', { required: 'Le téléphone est requis' })} 
-              />
-              {errors.telephone && <p className="text-red-500 text-sm mt-1">{errors.telephone.message}</p>}
+              <input type="tel" className="input-field" placeholder="+243 XXX XXX XXX" {...register('telephone', { required: 'Requis' })} />
             </div>
 
             <div>
               <label className="label">Filière souhaitée *</label>
-              <select className="input-field" {...register('filiere_id', { required: 'La filière est requise' })}>
+              <select className="input-field" {...register('filiere_id', { required: 'Requis' })}>
                 <option value="">Sélectionner une filière</option>
                 {filieres.map((f) => (
-                  <option key={f.id} value={f.id}>{f.nom_filiere || f.nom}</option>
+                  <option key={f.id} value={f.id}>{f.nom_filiere}</option>
                 ))}
               </select>
-              {errors.filiere_id && <p className="text-red-500 text-sm mt-1">{errors.filiere_id.message}</p>}
             </div>
 
             <div>
-              <label className="label">Dernier diplôme obtenu</label>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="Ex: Baccalauréat, Licence..."
-                {...register('dernier_diplome')} 
-              />
+              <label className="label">Dernier diplôme</label>
+              <input type="text" className="input-field" placeholder="Ex: Diplôme d'État" {...register('dernier_diplome')} />
             </div>
 
             <div>
               <label className="label">Établissement d'origine</label>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="Nom de votre dernier établissement"
-                {...register('etablissement_origine')} 
-              />
+              <input type="text" className="input-field" {...register('etablissement_origine')} />
             </div>
 
-            <button 
-              type="submit" 
-              className="btn-primary w-full" 
-              disabled={createCandidatMutation.isPending}
-            >
-              {createCandidatMutation.isPending ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Enregistrement...
-                </span>
-              ) : 'Continuer'}
+            <button type="submit" className="btn-primary w-full" disabled={createCandidatMutation.isPending}>
+              {createCandidatMutation.isPending ? 'Enregistrement...' : 'Continuer'}
             </button>
           </form>
         </div>
       )}
 
-      {/* Step 2: Documents Upload */}
+      {/* Step 2: Documents */}
       {step === 2 && (
         <div className="card">
           <h2 className="text-lg font-semibold mb-2">Documents requis</h2>
-          <p className="text-gray-500 text-sm mb-4">
-            Téléversez les documents nécessaires pour compléter votre dossier (formats acceptés: PDF, JPG, PNG - max 5MB)
-          </p>
+          <p className="text-gray-500 text-sm mb-4">Formats: PDF, JPG, PNG (max 5MB)</p>
           
           {candidat && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
@@ -359,15 +295,13 @@ export default function Enrolement() {
             {[
               { key: 'photo_identite', label: 'Photo d\'identité', required: true },
               { key: 'acte_naissance', label: 'Acte de naissance', required: true },
-              { key: 'diplome', label: 'Diplôme ou attestation de réussite', required: false },
+              { key: 'diplome', label: 'Diplôme ou attestation', required: false },
               { key: 'certificat_nationalite', label: 'Certificat de nationalité', required: false }
             ].map((doc) => (
               <div 
                 key={doc.key} 
-                className={`border-2 border-dashed rounded-lg p-4 transition-colors ${
-                  uploadedFiles[doc.key] 
-                    ? 'border-green-400 bg-green-50' 
-                    : 'border-gray-300 hover:border-primary-400'
+                className={`border-2 border-dashed rounded-lg p-4 ${
+                  uploadedFiles[doc.key] ? 'border-green-400 bg-green-50' : 'border-gray-300'
                 }`}
               >
                 <label className="cursor-pointer block">
@@ -378,18 +312,12 @@ export default function Enrolement() {
                       <CloudArrowUpIcon className="w-8 h-8 text-gray-400" />
                     )}
                     <div className="flex-1">
-                      <p className="font-medium text-gray-700">
-                        {doc.label} {doc.required && <span className="text-red-500">*</span>}
-                      </p>
+                      <p className="font-medium">{doc.label} {doc.required && <span className="text-red-500">*</span>}</p>
                       <p className="text-sm text-gray-500">
-                        {uploadedFiles[doc.key] 
-                          ? uploadedFiles[doc.key].name 
-                          : 'Cliquez pour téléverser'}
+                        {uploadedFiles[doc.key] ? uploadedFiles[doc.key].name : 'Cliquez pour téléverser'}
                       </p>
                     </div>
-                    {uploadedFiles[doc.key] && (
-                      <CheckCircleIcon className="w-6 h-6 text-green-500" />
-                    )}
+                    {uploadedFiles[doc.key] && <CheckCircleIcon className="w-6 h-6 text-green-500" />}
                   </div>
                   <input
                     type="file"
@@ -401,29 +329,19 @@ export default function Enrolement() {
               </div>
             ))}
 
-            <div className="pt-4">
-              <button
-                onClick={onSubmitStep2}
-                className="btn-primary w-full"
-                disabled={isSubmitting || createEnrolementMutation.isPending || !uploadedFiles.photo_identite || !uploadedFiles.acte_naissance}
-              >
-                {isSubmitting || createEnrolementMutation.isPending ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Soumission en cours...
-                  </span>
-                ) : 'Soumettre mon enrôlement'}
-              </button>
-              
-              {(!uploadedFiles.photo_identite || !uploadedFiles.acte_naissance) && (
-                <p className="text-sm text-orange-600 mt-2 text-center">
-                  Veuillez téléverser au moins la photo d'identité et l'acte de naissance
-                </p>
-              )}
-            </div>
+            <button
+              onClick={onSubmitStep2}
+              className="btn-primary w-full mt-4"
+              disabled={isSubmitting || !uploadedFiles.photo_identite || !uploadedFiles.acte_naissance}
+            >
+              {isSubmitting ? 'Soumission...' : 'Soumettre mon enrôlement'}
+            </button>
+            
+            {(!uploadedFiles.photo_identite || !uploadedFiles.acte_naissance) && (
+              <p className="text-sm text-orange-600 text-center">
+                Photo d'identité et acte de naissance requis
+              </p>
+            )}
           </div>
         </div>
       )}

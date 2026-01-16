@@ -162,17 +162,34 @@ Route::middleware('auth:sanctum')->group(function () {
     // Mon enrôlement (pour étudiant)
     Route::get('/mon-enrolement', function (Request $request) {
         $user = $request->user();
-        $candidat = \App\Models\Candidat::where('utilisateur_id', $user->id)->first();
+        $candidat = \App\Models\Candidat::where('utilisateur_id', $user->id)
+            ->with(['filiere', 'filiere.departement', 'enrolement', 'paiements', 'documents'])
+            ->first();
         
         if (!$candidat) {
-            return response()->json(['success' => true, 'data' => null]);
+            return response()->json(['success' => true, 'data' => null, 'candidat' => null]);
         }
         
-        $enrolement = \App\Models\Enrolement::where('candidat_id', $candidat->id)
-            ->with(['candidat.filiere', 'session', 'concours'])
-            ->first();
+        $enrolement = $candidat->enrolement;
             
-        return response()->json(['success' => true, 'data' => $enrolement, 'candidat' => $candidat]);
+        return response()->json([
+            'success' => true, 
+            'data' => $enrolement, 
+            'candidat' => $candidat
+        ]);
+    });
+    
+    // Mon candidat (pour étudiant)
+    Route::get('/mon-candidat', function (Request $request) {
+        $user = $request->user();
+        $candidat = \App\Models\Candidat::where('utilisateur_id', $user->id)
+            ->with(['filiere', 'filiere.departement', 'enrolement', 'paiements', 'documents'])
+            ->first();
+        
+        return response()->json([
+            'success' => true, 
+            'data' => $candidat
+        ]);
     });
     
     // Mes documents (pour étudiant)
@@ -181,7 +198,7 @@ Route::middleware('auth:sanctum')->group(function () {
         $candidat = \App\Models\Candidat::where('utilisateur_id', $user->id)->first();
         
         if (!$candidat) {
-            return response()->json(['success' => true, 'data' => []]);
+            return response()->json(['success' => true, 'data' => [], 'candidat' => null]);
         }
         
         $documents = \App\Models\Document::where('candidat_id', $candidat->id)->get();

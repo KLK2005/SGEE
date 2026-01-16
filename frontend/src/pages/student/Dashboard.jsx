@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
-import { candidatService } from '../../services/candidatService'
+import api from '../../services/api'
 import {
   AcademicCapIcon,
   CreditCardIcon,
@@ -16,17 +16,21 @@ const StatusBadge = ({ status }) => {
     valide: 'bg-green-100 text-green-800',
     en_attente: 'bg-yellow-100 text-yellow-800',
     rejete: 'bg-red-100 text-red-800',
+    nouveau: 'bg-blue-100 text-blue-800',
+    en_cours: 'bg-yellow-100 text-yellow-800',
   }
   
   const labels = {
     valide: 'Validé',
     en_attente: 'En attente',
     rejete: 'Rejeté',
+    nouveau: 'Nouveau',
+    en_cours: 'En cours',
   }
 
   return (
     <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[status] || styles.en_attente}`}>
-      {labels[status] || status}
+      {labels[status] || status || 'En attente'}
     </span>
   )
 }
@@ -34,12 +38,12 @@ const StatusBadge = ({ status }) => {
 export default function StudentDashboard() {
   const { user } = useAuthStore()
 
-  const { data: candidatData, isLoading } = useQuery({
-    queryKey: ['candidat-profile'],
-    queryFn: () => candidatService.getAll({ utilisateur_id: user?.id }),
+  const { data: candidatResponse, isLoading } = useQuery({
+    queryKey: ['mon-candidat-dashboard'],
+    queryFn: async () => (await api.get('/mon-candidat')).data,
   })
 
-  const candidat = candidatData?.data?.[0]
+  const candidat = candidatResponse?.data
 
   const quickActions = [
     {
@@ -65,6 +69,14 @@ export default function StudentDashboard() {
     },
   ]
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
@@ -87,7 +99,7 @@ export default function StudentDashboard() {
                 <AcademicCapIcon className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Statut candidature</p>
+                <p className="text-sm text-gray-500">Candidature</p>
                 <StatusBadge status={candidat.statut_candidat} />
               </div>
             </div>
@@ -98,7 +110,7 @@ export default function StudentDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Paiement</p>
-                <StatusBadge status={candidat.paiement?.statut_paiement || 'en_attente'} />
+                <StatusBadge status={candidat.paiements?.[0]?.statut_paiement} />
               </div>
             </div>
 
@@ -108,7 +120,7 @@ export default function StudentDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Enrôlement</p>
-                <StatusBadge status={candidat.enrolement?.statut_enrolement || 'en_attente'} />
+                <StatusBadge status={candidat.enrolement?.statut_enrolement} />
               </div>
             </div>
           </div>
@@ -117,6 +129,13 @@ export default function StudentDashboard() {
             <div className="mt-4 p-4 bg-primary-50 rounded-lg">
               <p className="text-sm text-primary-600">Numéro de dossier</p>
               <p className="text-xl font-bold text-primary-700">{candidat.numero_dossier}</p>
+            </div>
+          )}
+
+          {candidat.filiere && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-500">Filière</p>
+              <p className="text-lg font-semibold text-gray-900">{candidat.filiere.nom_filiere}</p>
             </div>
           )}
         </div>
@@ -149,7 +168,7 @@ export default function StudentDashboard() {
             <div>
               <h3 className="font-semibold text-yellow-800">Commencez votre enrôlement</h3>
               <p className="text-yellow-700 text-sm mt-1">
-                Vous n'avez pas encore de dossier d'enrôlement. Cliquez sur "Mon Enrôlement" pour commencer le processus.
+                Vous n'avez pas encore de dossier. Cliquez sur "Mon Enrôlement" pour commencer.
               </p>
             </div>
           </div>
