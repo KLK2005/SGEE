@@ -10,6 +10,7 @@ import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 
 // Public Pages
+import Home from './pages/public/Home'
 import VerifyQrCode from './pages/public/VerifyQrCode'
 
 // Student Pages
@@ -50,6 +51,7 @@ function App() {
   return (
     <Routes>
       {/* Public Routes */}
+      <Route path="/" element={<Home />} />
       <Route path="/verify" element={<VerifyQrCode />} />
 
       {/* Auth Routes */}
@@ -91,9 +93,9 @@ function App() {
         <Route path="utilisateurs" element={<GestionUtilisateurs />} />
       </Route>
 
-      {/* Default redirect */}
+      {/* Dashboard redirect for authenticated users */}
       <Route
-        path="/"
+        path="/dashboard"
         element={
           isAuthenticated ? (
             <Navigate to={userRole === 'admin' ? '/admin' : '/etudiant'} replace />

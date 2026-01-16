@@ -11,12 +11,16 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        $this->call([
-            RoleSeeder::class,
-            DepartementSeeder::class,
-            FiliereSeeder::class,
-            SessionConcoursSeeder::class,
-            AdminSeeder::class,
-        ]);
+        // Option 1: Seeders individuels
+        // $this->call([
+        //     RoleSeeder::class,
+        //     DepartementSeeder::class,
+        //     FiliereSeeder::class,
+        //     SessionConcoursSeeder::class,
+        //     AdminSeeder::class,
+        // ]);
+
+        // Option 2: Seeder complet avec données de test
+        $this->call(TestDataSeeder::class);
     }
 }

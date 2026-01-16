@@ -30,17 +30,24 @@ class Candidat extends Model
         'concours_id',
         'centre_exam_id',
         'centre_depot_id',
-        'utilisateur_id',         // lien avec l'utilisateur connecté
+        'utilisateur_id',
         'statut_candidat',
-        'adresse_complete',       // rue, ville, code postal
-        'niveau_etude',           // bac, licence, master…
-        'serie_bac',              // A, C, D, etc.
-        'mention_bac',            // TB, B, AB…
-        'option_bac',             // option choisie
-        'annee_obtention',        // année du diplôme
-        'langues_parlees',        // français, anglais,...
-        'handicap',               // oui/non
-        'observations'            // notes internes
+        'adresse_complete',
+        'pays',
+        'ville',
+        'quartier',
+        'niveau_etude',
+        'serie_bac',
+        'mention_bac',
+        'option_bac',
+        'annee_obtention',
+        'langues_parlees',
+        'handicap',
+        'observations',
+        'nom_pere',
+        'tel_pere',
+        'nom_mere',
+        'tel_mere',
     ];
 
     // Relation avec l'utilisateur
