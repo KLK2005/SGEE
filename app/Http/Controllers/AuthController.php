@@ -23,9 +23,8 @@ class AuthController extends Controller
                 'nom' => 'required|string|max:255',
                 'prenom' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:utilisateurs',
-                'telephone' => 'required|string|max:20',
+                'telephone' => 'nullable|string|max:20',
                 'password' => 'required|string|min:8|confirmed',
-                'role_id' => 'required|exists:roles,id'
             ]);
 
             if ($validator->fails()) {
@@ -36,13 +35,23 @@ class AuthController extends Controller
                 ], 422);
             }
 
+            // Récupérer le rôle étudiant par défaut
+            $roleEtudiant = \App\Models\Role::where('nom_role', 'etudiant')->first();
+            
+            if (!$roleEtudiant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Rôle étudiant non trouvé. Veuillez exécuter les seeders.'
+                ], 500);
+            }
+
             $utilisateur = Utilisateur::create([
                 'nom' => $request->nom,
                 'prenom' => $request->prenom,
                 'email' => $request->email,
-                'telephone' => $request->telephone,
+                'telephone' => $request->telephone ?? '',
                 'password' => Hash::make($request->password),
-                'role_id' => $request->role_id,
+                'role_id' => $request->role_id ?? $roleEtudiant->id,
                 'statut' => 'actif',
                 'adresse_ip' => $request->ip()
             ]);

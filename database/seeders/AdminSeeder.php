@@ -11,19 +11,21 @@ class AdminSeeder extends Seeder
 {
     public function run(): void
     {
-        $adminRole = Role::where('nom', 'admin')->first();
+        $adminRole = Role::where('nom_role', 'admin')->first();
 
         if ($adminRole) {
-            Utilisateur::firstOrCreate(
-                ['email' => 'admin@sgee.com'],
-                [
-                    'nom' => 'Admin',
-                    'prenom' => 'SGEE',
-                    'email' => 'admin@sgee.com',
-                    'password' => Hash::make('password123'),
-                    'role_id' => $adminRole->id,
-                ]
-            );
+            // Supprimer l'ancien admin s'il existe pour recréer avec bon password
+            Utilisateur::where('email', 'admin@sgee.com')->delete();
+            
+            Utilisateur::create([
+                'nom' => 'Admin',
+                'prenom' => 'SGEE',
+                'email' => 'admin@sgee.com',
+                'telephone' => '000000000',
+                'password' => Hash::make('password123'),
+                'role_id' => $adminRole->id,
+                'statut' => 'actif',
+            ]);
         }
     }
 }
