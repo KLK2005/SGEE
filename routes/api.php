@@ -155,6 +155,43 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/documents/upload', [DocumentController::class, 'upload']);
     Route::get('/documents/candidat/{candidatId}', [DocumentController::class, 'getByCandidat']);
     Route::delete('/documents/{id}', [DocumentController::class, 'destroy']);
+    Route::get('/documents/download', [DocumentController::class, 'downloadDocument']);
+    Route::get('/documents/fiche-enrolement/{candidatId}', [DocumentController::class, 'generateFicheEnrolement']);
+    Route::get('/documents/quitus/{paiementId}', [DocumentController::class, 'generateQuitusPaiement']);
+    
+    // Mon enrôlement (pour étudiant)
+    Route::get('/mon-enrolement', function (Request $request) {
+        $user = $request->user();
+        $candidat = \App\Models\Candidat::where('utilisateur_id', $user->id)->first();
+        
+        if (!$candidat) {
+            return response()->json(['success' => true, 'data' => null]);
+        }
+        
+        $enrolement = \App\Models\Enrolement::where('candidat_id', $candidat->id)
+            ->with(['candidat.filiere', 'session', 'concours'])
+            ->first();
+            
+        return response()->json(['success' => true, 'data' => $enrolement, 'candidat' => $candidat]);
+    });
+    
+    // Mes documents (pour étudiant)
+    Route::get('/mes-documents', function (Request $request) {
+        $user = $request->user();
+        $candidat = \App\Models\Candidat::where('utilisateur_id', $user->id)->first();
+        
+        if (!$candidat) {
+            return response()->json(['success' => true, 'data' => []]);
+        }
+        
+        $documents = \App\Models\Document::where('candidat_id', $candidat->id)->get();
+            
+        return response()->json([
+            'success' => true, 
+            'data' => $documents,
+            'candidat' => $candidat
+        ]);
+    });
 
     // Filières
     Route::apiResource('filieres', FiliereController::class);

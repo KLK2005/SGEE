@@ -121,9 +121,9 @@ export default function GestionUtilisateurs() {
                 <td className="py-3 px-4 text-gray-600">{user.email}</td>
                 <td className="py-3 px-4">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    user.role?.nom === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                    (user.role?.nom_role || user.role?.nom) === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
                   }`}>
-                    {user.role?.nom || 'N/A'}
+                    {user.role?.nom_role || user.role?.nom || 'N/A'}
                   </span>
                 </td>
                 <td className="py-3 px-4">
@@ -172,7 +172,7 @@ export default function GestionUtilisateurs() {
                 <label className="label">Rôle</label>
                 <select className="input-field" {...register('role_id', { required: 'Requis' })}>
                   <option value="">Sélectionner</option>
-                  {roles.map((r) => <option key={r.id} value={r.id}>{r.nom}</option>)}
+                  {roles.map((r) => <option key={r.id} value={r.id}>{r.nom_role || r.nom}</option>)}
                 </select>
               </div>
               <div className="flex gap-3 pt-4">

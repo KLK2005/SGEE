@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
-import { candidatService } from '../../services/candidatService'
+import api from '../../services/api'
 import { enrolementService } from '../../services/enrolementService'
 import { paiementService } from '../../services/paiementService'
 import { documentService } from '../../services/documentService'
@@ -20,51 +20,67 @@ export default function MesDocuments() {
   const queryClient = useQueryClient()
   const [uploading, setUploading] = useState(null)
 
-  const { data: candidatData, isLoading, refetch } = useQuery({
-    queryKey: ['my-candidat-docs'],
-    queryFn: () => candidatService.getAll({ utilisateur_id: user?.id }),
+  // Fetch mon enrôlement et candidat
+  const { data: enrolementData, isLoading: loadingEnrolement } = useQuery({
+    queryKey: ['mon-enrolement'],
+    queryFn: async () => (await api.get('/mon-enrolement')).data,
   })
 
-  const candidat = candidatData?.data?.[0]
-
-  // Fetch documents for candidat
-  const { data: documentsData } = useQuery({
-    queryKey: ['my-documents', candidat?.id],
-    queryFn: () => documentService.getByCandidat(candidat.id),
-    enabled: !!candidat?.id,
+  // Fetch mes documents
+  const { data: documentsData, isLoading: loadingDocs } = useQuery({
+    queryKey: ['mes-documents'],
+    queryFn: async () => (await api.get('/mes-documents')).data,
   })
 
+  // Fetch mes paiements
+  const { data: paiementsData } = useQuery({
+    queryKey: ['mes-paiements'],
+    queryFn: async () => (await api.get('/mes-paiements')).data,
+  })
+
+  const candidat = documentsData?.candidat || enrolementData?.candidat
+  const enrolement = enrolementData?.data
   const uploadedDocs = documentsData?.data || []
+  const paiements = paiementsData?.data || []
+  const isLoading = loadingEnrolement || loadingDocs
 
   const handleDownloadFiche = async () => {
-    if (!candidat?.enrolement?.id) return
+    if (!enrolement?.id) {
+      toast.error('Aucun enrôlement trouvé')
+      return
+    }
     try {
-      const blob = await enrolementService.downloadFiche(candidat.enrolement.id)
+      const blob = await enrolementService.downloadFiche(enrolement.id)
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `fiche_enrolement_${candidat.numero_dossier}.pdf`
+      a.download = `fiche_enrolement_${candidat?.numero_dossier || 'doc'}.pdf`
       a.click()
       window.URL.revokeObjectURL(url)
       toast.success('Téléchargement réussi')
     } catch (error) {
+      console.error('Download error:', error)
       toast.error('Erreur lors du téléchargement')
     }
   }
 
   const handleDownloadQuitus = async () => {
-    const paiementValide = candidat?.paiements?.find(p => p.statut_paiement === 'valide')
-    if (!paiementValide) return
+    const paiementValide = paiements.find(p => p.statut_paiement === 'valide')
+    if (!paiementValide) {
+      toast.error('Aucun paiement validé trouvé')
+      return
+    }
     try {
       const blob = await paiementService.downloadQuitus(paiementValide.id)
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `quitus_${candidat.numero_dossier}.pdf`
+      a.download = `quitus_${candidat?.numero_dossier || 'doc'}.pdf`
       a.click()
       window.URL.revokeObjectURL(url)
       toast.success('Téléchargement réussi')
     } catch (error) {
+      console.error('Download error:', error)
       toast.error('Erreur lors du téléchargement')
     }
   }
@@ -95,7 +111,7 @@ export default function MesDocuments() {
     try {
       await documentService.delete(docId)
       toast.success('Document supprimé')
-      queryClient.invalidateQueries(['my-documents'])
+      queryClient.invalidateQueries(['mes-documents'])
     } catch (error) {
       toast.error('Erreur lors de la suppression')
     }
@@ -119,19 +135,21 @@ export default function MesDocuments() {
     )
   }
 
+  const paiementValide = paiements.find(p => p.statut_paiement === 'valide')
+
   const officialDocuments = [
     {
       id: 'fiche',
       title: 'Fiche d\'enrôlement',
       description: 'Document officiel avec QR Code de vérification',
-      available: candidat.enrolement?.statut_enrolement === 'valide',
+      available: enrolement?.statut_enrolement === 'valide',
       onDownload: handleDownloadFiche,
     },
     {
       id: 'quitus',
       title: 'Quitus de paiement',
       description: 'Attestation de paiement des frais d\'enrôlement',
-      available: candidat.paiements?.some(p => p.statut_paiement === 'valide'),
+      available: !!paiementValide,
       onDownload: handleDownloadQuitus,
     },
   ]
@@ -286,29 +304,28 @@ export default function MesDocuments() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-sm text-gray-500">Numéro de dossier</p>
-            <p className="font-semibold text-gray-900">{candidat.numero_dossier || '-'}</p>
+            <p className="font-semibold text-gray-900">{candidat?.numero_dossier || '-'}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Filière</p>
-            <p className="font-semibold text-gray-900">{candidat.filiere?.nom_filiere || candidat.filiere?.nom || '-'}</p>
+            <p className="font-semibold text-gray-900">{enrolement?.candidat?.filiere?.nom_filiere || candidat?.filiere?.nom_filiere || '-'}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Statut enrôlement</p>
             <span className={`inline-block mt-1 px-2 py-1 rounded text-xs font-medium ${
-              candidat.enrolement?.statut_enrolement === 'valide' ? 'bg-green-100 text-green-800' :
-              candidat.enrolement?.statut_enrolement === 'rejete' ? 'bg-red-100 text-red-800' :
+              enrolement?.statut_enrolement === 'valide' ? 'bg-green-100 text-green-800' :
+              enrolement?.statut_enrolement === 'rejete' ? 'bg-red-100 text-red-800' :
               'bg-yellow-100 text-yellow-800'
             }`}>
-              {candidat.enrolement?.statut_enrolement || 'En attente'}
+              {enrolement?.statut_enrolement || 'En attente'}
             </span>
           </div>
           <div>
             <p className="text-sm text-gray-500">Statut paiement</p>
             <span className={`inline-block mt-1 px-2 py-1 rounded text-xs font-medium ${
-              candidat.paiements?.some(p => p.statut_paiement === 'valide') ? 'bg-green-100 text-green-800' :
-              'bg-yellow-100 text-yellow-800'
+              paiementValide ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
             }`}>
-              {candidat.paiements?.some(p => p.statut_paiement === 'valide') ? 'Payé' : 'En attente'}
+              {paiementValide ? 'Payé' : 'En attente'}
             </span>
           </div>
         </div>

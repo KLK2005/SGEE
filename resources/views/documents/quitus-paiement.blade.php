@@ -118,7 +118,11 @@
         
         <div class="qr-section">
             <div class="qr-code">
-                <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code" style="width: 100px; height: 100px;">
+                @if(isset($qrCodeFormat) && $qrCodeFormat === 'svg')
+                    <img src="data:image/svg+xml;base64,{{ $qrCode }}" alt="QR Code" style="width: 100px; height: 100px;">
+                @else
+                    <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code" style="width: 100px; height: 100px;">
+                @endif
             </div>
             <p style="font-size: 10px; margin: 5px 0;">Code de vérification</p>
         </div>

@@ -27,6 +27,7 @@ import GestionDepartements from './pages/admin/GestionDepartements'
 import GestionPaiements from './pages/admin/GestionPaiements'
 import Statistiques from './pages/admin/Statistiques'
 import GestionUtilisateurs from './pages/admin/GestionUtilisateurs'
+import GestionRoles from './pages/admin/GestionRoles'
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -91,6 +92,7 @@ function App() {
         <Route path="paiements" element={<GestionPaiements />} />
         <Route path="statistiques" element={<Statistiques />} />
         <Route path="utilisateurs" element={<GestionUtilisateurs />} />
+        <Route path="roles" element={<GestionRoles />} />
       </Route>
 
       {/* Dashboard redirect for authenticated users */}

@@ -14,6 +14,7 @@ import {
   Bars3Icon,
   XMarkIcon,
   UserIcon,
+  ShieldCheckIcon,
 } from '@heroicons/react/24/outline'
 
 const studentNavItems = [
@@ -31,6 +32,7 @@ const adminNavItems = [
   { name: 'Paiements', href: '/admin/paiements', icon: CreditCardIcon },
   { name: 'Statistiques', href: '/admin/statistiques', icon: ChartBarIcon },
   { name: 'Utilisateurs', href: '/admin/utilisateurs', icon: UserIcon },
+  { name: 'Rôles', href: '/admin/roles', icon: ShieldCheckIcon },
 ]
 
 export default function DashboardLayout() {

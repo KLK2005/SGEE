@@ -19,7 +19,7 @@ class PdfService
     {
         $candidat = $enrolement->candidat;
         
-        // Générer QR Code unique
+        // Générer QR Code unique (en SVG pour éviter le besoin d'imagick)
         $qrData = json_encode([
             'type' => 'enrolement',
             'enrolement_id' => $enrolement->id,
@@ -30,12 +30,15 @@ class PdfService
             'hash' => hash('sha256', $enrolement->id . $candidat->numero_dossier . config('app.key'))
         ]);
 
-        $qrCode = base64_encode(QrCode::format('png')->size(150)->generate($qrData));
+        // Utiliser SVG et le convertir en base64 pour l'intégration dans le PDF
+        $qrCodeSvg = QrCode::format('svg')->size(150)->generate($qrData);
+        $qrCode = base64_encode($qrCodeSvg);
 
         // Préparer les données pour le PDF
         $data = [
             'enrolement' => $enrolement->load(['candidat.filiere.departement', 'session', 'concours', 'centreDepot']),
             'qrCode' => $qrCode,
+            'qrCodeFormat' => 'svg',
             'dateGeneration' => Carbon::now()->format('d/m/Y à H:i')
         ];
 
@@ -62,7 +65,7 @@ class PdfService
     {
         $candidat = $paiement->candidat;
         
-        // Générer QR Code unique
+        // Générer QR Code unique (en SVG)
         $qrData = json_encode([
             'type' => 'quitus',
             'paiement_id' => $paiement->id,
@@ -72,12 +75,14 @@ class PdfService
             'hash' => hash('sha256', $paiement->id . $paiement->montant . config('app.key'))
         ]);
 
-        $qrCode = base64_encode(QrCode::format('png')->size(120)->generate($qrData));
+        $qrCodeSvg = QrCode::format('svg')->size(120)->generate($qrData);
+        $qrCode = base64_encode($qrCodeSvg);
 
         // Préparer les données pour le PDF
         $data = [
             'paiement' => $paiement->load(['candidat', 'enrolement']),
             'qrCode' => $qrCode,
+            'qrCodeFormat' => 'svg',
             'dateGeneration' => Carbon::now()->format('d/m/Y à H:i')
         ];
 

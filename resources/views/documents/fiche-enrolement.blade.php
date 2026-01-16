@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fiche d'Enrôlement - {{ $candidat->numero_dossier }}</title>
+    <title>Fiche d'Enrôlement - {{ $enrolement->candidat->numero_dossier ?? 'N/A' }}</title>
     <style>
         body {
             font-family: 'DejaVu Sans', sans-serif;
@@ -107,7 +107,11 @@
         
         <div class="qr-section">
             <div class="qr-code">
-                <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code" style="width: 120px; height: 120px;">
+                @if(isset($qrCodeFormat) && $qrCodeFormat === 'svg')
+                    <img src="data:image/svg+xml;base64,{{ $qrCode }}" alt="QR Code" style="width: 120px; height: 120px;">
+                @else
+                    <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code" style="width: 120px; height: 120px;">
+                @endif
             </div>
             <p style="font-size: 10px; margin: 5px 0;">Code de vérification</p>
         </div>
@@ -210,7 +214,7 @@
             </div>
             <div class="info-row">
                 <div class="info-label">Centre de dépôt:</div>
-                <div class="info-value">{{ $enrolement->centreDepot->nom ?? 'N/A' }}</div>
+                <div class="info-value">{{ $enrolement->centreDepot->nom_centre ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Date d'enrôlement:</div>
