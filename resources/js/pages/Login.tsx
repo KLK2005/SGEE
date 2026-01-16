@@ -19,7 +19,8 @@ const Login: React.FC = () => {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur de connexion');
+      const errorMessage = err.response?.data?.message || err.message || 'Erreur de connexion';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

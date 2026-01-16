@@ -118,7 +118,7 @@
         
         <div class="qr-section">
             <div class="qr-code">
-                <img src="{{ $qrCodePath }}" alt="QR Code" style="width: 100px; height: 100px;">
+                <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code" style="width: 100px; height: 100px;">
             </div>
             <p style="font-size: 10px; margin: 5px 0;">Code de vérification</p>
         </div>
@@ -162,8 +162,8 @@
                 <div class="info-value">{{ ucfirst(str_replace('_', ' ', $paiement->mode_paiement)) }}</div>
             </div>
             <div class="info-row">
-                <div class="info-label">Référence:</div>
-                <div class="info-value">{{ $paiement->reference_paiement ?? 'N/A' }}</div>
+                <div class="info-label">Référence transaction:</div>
+                <div class="info-value">{{ $paiement->reference_transaction ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Statut:</div>
@@ -176,11 +176,6 @@
         <div class="montant-principal">
             MONTANT PAYÉ: {{ number_format($paiement->montant, 0, ',', ' ') }} FCFA
         </div>
-        @if($paiement->frais_supplementaires > 0)
-        <p style="text-align: center; margin-top: 10px;">
-            <small>Dont frais supplémentaires: {{ number_format($paiement->frais_supplementaires, 0, ',', ' ') }} FCFA</small>
-        </p>
-        @endif
     </div>
 
     @if($paiement->enrolement)

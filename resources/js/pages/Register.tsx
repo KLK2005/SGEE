@@ -10,6 +10,7 @@ const Register: React.FC = () => {
     telephone: '',
     password: '',
     password_confirmation: '',
+    role_id: 2, // Rôle étudiant par défaut
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

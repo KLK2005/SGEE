@@ -103,11 +103,11 @@
     <div class="header">
         <h1>FICHE D'ENRÔLEMENT</h1>
         <h2>Système de Gestion d'Enrôlement des Étudiants</h2>
-        <p><strong>N° Dossier:</strong> {{ $candidat->numero_dossier }}</p>
+        <p><strong>N° Dossier:</strong> {{ $enrolement->candidat->numero_dossier }}</p>
         
         <div class="qr-section">
             <div class="qr-code">
-                <img src="{{ $qrCodePath }}" alt="QR Code" style="width: 120px; height: 120px;">
+                <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code" style="width: 120px; height: 120px;">
             </div>
             <p style="font-size: 10px; margin: 5px 0;">Code de vérification</p>
         </div>
@@ -118,39 +118,39 @@
         <div class="info-grid">
             <div class="info-row">
                 <div class="info-label">Nom:</div>
-                <div class="info-value">{{ strtoupper($candidat->nom) }}</div>
+                <div class="info-value">{{ strtoupper($enrolement->candidat->nom) }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Prénom:</div>
-                <div class="info-value">{{ ucwords(strtolower($candidat->prenom)) }}</div>
+                <div class="info-value">{{ ucwords(strtolower($enrolement->candidat->prenom)) }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Sexe:</div>
-                <div class="info-value">{{ $candidat->sexe == 'M' ? 'Masculin' : 'Féminin' }}</div>
+                <div class="info-value">{{ $enrolement->candidat->sexe == 'M' ? 'Masculin' : 'Féminin' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Date de naissance:</div>
-                <div class="info-value">{{ \Carbon\Carbon::parse($candidat->date_naissance)->format('d/m/Y') }}</div>
+                <div class="info-value">{{ \Carbon\Carbon::parse($enrolement->candidat->date_naissance)->format('d/m/Y') }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Lieu de naissance:</div>
-                <div class="info-value">{{ $candidat->lieu_naissance }}</div>
+                <div class="info-value">{{ $enrolement->candidat->lieu_naissance }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Nationalité:</div>
-                <div class="info-value">{{ $candidat->nationalite }}</div>
+                <div class="info-value">{{ $enrolement->candidat->nationalite }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Téléphone:</div>
-                <div class="info-value">{{ $candidat->telephone }}</div>
+                <div class="info-value">{{ $enrolement->candidat->telephone }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Email:</div>
-                <div class="info-value">{{ $candidat->email }}</div>
+                <div class="info-value">{{ $enrolement->candidat->email ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Adresse:</div>
-                <div class="info-value">{{ $candidat->adresse_complete }}</div>
+                <div class="info-value">{{ $enrolement->candidat->adresse_complete ?? 'N/A' }}</div>
             </div>
         </div>
     </div>
@@ -160,31 +160,31 @@
         <div class="info-grid">
             <div class="info-row">
                 <div class="info-label">Dernier diplôme:</div>
-                <div class="info-value">{{ $candidat->dernier_diplome }}</div>
+                <div class="info-value">{{ $enrolement->candidat->dernier_diplome ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Établissement d'origine:</div>
-                <div class="info-value">{{ $candidat->etablissement_origine }}</div>
+                <div class="info-value">{{ $enrolement->candidat->etablissement_origine ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Niveau d'étude:</div>
-                <div class="info-value">{{ $candidat->niveau_etude }}</div>
+                <div class="info-value">{{ $enrolement->candidat->niveau_etude ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Série BAC:</div>
-                <div class="info-value">{{ $candidat->serie_bac ?? 'N/A' }}</div>
+                <div class="info-value">{{ $enrolement->candidat->serie_bac ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Mention BAC:</div>
-                <div class="info-value">{{ $candidat->mention_bac ?? 'N/A' }}</div>
+                <div class="info-value">{{ $enrolement->candidat->mention_bac ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Année d'obtention:</div>
-                <div class="info-value">{{ $candidat->annee_obtention }}</div>
+                <div class="info-value">{{ $enrolement->candidat->annee_obtention ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Langues parlées:</div>
-                <div class="info-value">{{ $candidat->langues_parlees ?? 'N/A' }}</div>
+                <div class="info-value">{{ $enrolement->candidat->langues_parlees ?? 'N/A' }}</div>
             </div>
         </div>
     </div>
@@ -194,41 +194,49 @@
         <div class="info-grid">
             <div class="info-row">
                 <div class="info-label">Filière:</div>
-                <div class="info-value">{{ $candidat->filiere->nom ?? 'N/A' }}</div>
+                <div class="info-value">{{ $enrolement->candidat->filiere->nom_filiere ?? 'N/A' }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Département:</div>
+                <div class="info-value">{{ $enrolement->candidat->filiere->departement->nom_departement ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Concours:</div>
-                <div class="info-value">{{ $candidat->concours->nom ?? 'N/A' }}</div>
+                <div class="info-value">{{ $enrolement->concours->nom_concours ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
-                <div class="info-label">Centre d'examen:</div>
-                <div class="info-value">{{ $candidat->centreExam->nom ?? 'N/A' }}</div>
+                <div class="info-label">Session académique:</div>
+                <div class="info-value">{{ $enrolement->session->annee ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Centre de dépôt:</div>
-                <div class="info-value">{{ $candidat->centreDepot->nom_centre ?? 'N/A' }}</div>
+                <div class="info-value">{{ $enrolement->centreDepot->nom ?? 'N/A' }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Date d'enrôlement:</div>
+                <div class="info-value">{{ \Carbon\Carbon::parse($enrolement->date_enrolement)->format('d/m/Y') }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Statut:</div>
-                <div class="info-value">{{ ucfirst(str_replace('_', ' ', $candidat->statut_candidat)) }}</div>
+                <div class="info-value">{{ ucfirst(str_replace('_', ' ', $enrolement->statut_enrolement)) }}</div>
             </div>
         </div>
     </div>
 
-    @if($candidat->handicap || $candidat->observations)
+    @if($enrolement->candidat->handicap || $enrolement->candidat->observations)
     <div class="info-section">
         <h3>INFORMATIONS COMPLÉMENTAIRES</h3>
         <div class="info-grid">
-            @if($candidat->handicap)
+            @if($enrolement->candidat->handicap)
             <div class="info-row">
                 <div class="info-label">Situation de handicap:</div>
                 <div class="info-value">Oui</div>
             </div>
             @endif
-            @if($candidat->observations)
+            @if($enrolement->candidat->observations)
             <div class="info-row">
                 <div class="info-label">Observations:</div>
-                <div class="info-value">{{ $candidat->observations }}</div>
+                <div class="info-value">{{ $enrolement->candidat->observations }}</div>
             </div>
             @endif
         </div>

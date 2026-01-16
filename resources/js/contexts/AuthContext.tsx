@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchUser = async () => {
     try {
       const response = await axios.get('/user');
-      setUser(response.data.user);
+      setUser(response.data.data || response.data.user);
     } catch (error) {
       localStorage.removeItem('token');
       setToken(null);
@@ -55,7 +55,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     const response = await axios.post('/login', { email, password });
-    const { token: newToken, user: newUser } = response.data;
+    const data = response.data.data || response.data;
+    const newToken = data.token;
+    const newUser = data.user;
+    
+    if (!newToken || !newUser) {
+      throw new Error('Réponse invalide du serveur');
+    }
+    
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem('token', newToken);
@@ -64,7 +71,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (data: any) => {
     const response = await axios.post('/register', data);
-    const { token: newToken, user: newUser } = response.data;
+    const responseData = response.data.data || response.data;
+    const newToken = responseData.token;
+    const newUser = responseData.user;
+    
+    if (!newToken || !newUser) {
+      throw new Error('Réponse invalide du serveur');
+    }
+    
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem('token', newToken);

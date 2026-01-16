@@ -67,6 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/filieres', [FiliereController::class, 'store']);
     Route::put('/filieres/{id}', [FiliereController::class, 'update']);
     Route::delete('/filieres/{id}', [FiliereController::class, 'destroy']);
+    Route::get('/filieres/{id}/export-liste', [FiliereController::class, 'exportListe']);
 
     // Département routes
     Route::get('/departements', [DepartementController::class, 'index']);
@@ -74,6 +75,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/departements', [DepartementController::class, 'store']);
     Route::put('/departements/{id}', [DepartementController::class, 'update']);
     Route::delete('/departements/{id}', [DepartementController::class, 'destroy']);
+    Route::get('/departements/{id}/export-liste', [DepartementController::class, 'exportListe']);
+
+    // Centre de dépôt routes
+    Route::get('/centre-depot', [\App\Http\Controllers\CentreDepotController::class, 'index']);
+    Route::get('/centre-depot/{id}', [\App\Http\Controllers\CentreDepotController::class, 'show']);
+    Route::post('/centre-depot', [\App\Http\Controllers\CentreDepotController::class, 'store']);
+    Route::put('/centre-depot/{id}', [\App\Http\Controllers\CentreDepotController::class, 'update']);
+    Route::delete('/centre-depot/{id}', [\App\Http\Controllers\CentreDepotController::class, 'destroy']);
 
     // Session académique routes
     Route::get('/sessions-academiques', [SessionAcademiqueController::class, 'index']);
@@ -81,4 +90,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/sessions-academiques', [SessionAcademiqueController::class, 'store']);
     Route::put('/sessions-academiques/{id}', [SessionAcademiqueController::class, 'update']);
     Route::delete('/sessions-academiques/{id}', [SessionAcademiqueController::class, 'destroy']);
+
+    // Concours routes
+    Route::get('/concours', [\App\Http\Controllers\ConcoursController::class, 'index']);
+    Route::get('/concours/{id}', [\App\Http\Controllers\ConcoursController::class, 'show']);
+    Route::post('/concours', [\App\Http\Controllers\ConcoursController::class, 'store']);
+    Route::put('/concours/{id}', [\App\Http\Controllers\ConcoursController::class, 'update']);
+    Route::delete('/concours/{id}', [\App\Http\Controllers\ConcoursController::class, 'destroy']);
 });
