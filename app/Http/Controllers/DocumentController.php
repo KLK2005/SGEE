@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Candidat;
+use App\Models\Document;
 use App\Models\Paiement;
 use App\Services\DocumentService;
 use Illuminate\Http\Request;
@@ -20,6 +21,117 @@ class DocumentController extends Controller
     }
 
     /**
+     * Upload un document pour un candidat
+     */
+    public function upload(Request $request): JsonResponse
+    {
+        $request->validate([
+            'candidat_id' => 'required|exists:candidats,id',
+            'type_document' => 'required|string|in:photo_identite,acte_naissance,diplome,certificat_nationalite,autre',
+            'fichier' => 'required|file|max:5120|mimes:pdf,jpg,jpeg,png'
+        ]);
+
+        try {
+            $candidat = Candidat::findOrFail($request->candidat_id);
+            $file = $request->file('fichier');
+            $path = $file->store('documents/' . $candidat->id, 'public');
+
+            // Vérifier si un document du même type existe déjà
+            $existingDoc = Document::where('candidat_id', $candidat->id)
+                ->where('type_document', $request->type_document)
+                ->first();
+
+            if ($existingDoc) {
+                // Supprimer l'ancien fichier
+                if (Storage::disk('public')->exists($existingDoc->fichier)) {
+                    Storage::disk('public')->delete($existingDoc->fichier);
+                }
+                $existingDoc->update([
+                    'fichier' => $path,
+                    'statut_verification' => 'en_attente',
+                    'date_upload' => now()
+                ]);
+                $document = $existingDoc;
+            } else {
+                $document = Document::create([
+                    'candidat_id' => $candidat->id,
+                    'type_document' => $request->type_document,
+                    'fichier' => $path,
+                    'statut_verification' => 'en_attente',
+                    'date_upload' => now()
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document uploadé avec succès',
+                'data' => $document
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'upload',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupérer les documents d'un candidat
+     */
+    public function getByCandidat($candidatId): JsonResponse
+    {
+        try {
+            $documents = Document::where('candidat_id', $candidatId)->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $documents->map(function($doc) {
+                    return [
+                        'id' => $doc->id,
+                        'type_document' => $doc->type_document,
+                        'fichier' => $doc->fichier,
+                        'url' => Storage::disk('public')->url($doc->fichier),
+                        'statut_verification' => $doc->statut_verification,
+                        'date_upload' => $doc->date_upload
+                    ];
+                })
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des documents'
+            ], 500);
+        }
+    }
+
+    /**
+     * Supprimer un document
+     */
+    public function destroy($id): JsonResponse
+    {
+        try {
+            $document = Document::findOrFail($id);
+            
+            if (Storage::disk('public')->exists($document->fichier)) {
+                Storage::disk('public')->delete($document->fichier);
+            }
+            
+            $document->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document supprimé avec succès'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la suppression'
+            ], 500);
+        }
+    }
+
+    /**
      * Générer et télécharger la fiche d'enrôlement
      */
     public function generateFicheEnrolement(Request $request, int $candidatId): JsonResponse
@@ -28,7 +140,8 @@ class DocumentController extends Controller
             $candidat = Candidat::findOrFail($candidatId);
             
             // Vérifier les permissions
-            if ($request->user()->role->nom !== 'admin' && $request->user()->id !== $candidat->utilisateur_id) {
+            $userRole = $request->user()->role->nom_role ?? $request->user()->role->nom ?? '';
+            if ($userRole !== 'admin' && $request->user()->id !== $candidat->utilisateur_id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Accès non autorisé'
@@ -42,7 +155,7 @@ class DocumentController extends Controller
                 'message' => 'Fiche d\'enrôlement générée avec succès',
                 'data' => [
                     'file_path' => $filePath,
-                    'download_url' => route('documents.download', ['path' => base64_encode($filePath)])
+                    'download_url' => Storage::disk('public')->url($filePath)
                 ]
             ]);
 
@@ -50,7 +163,7 @@ class DocumentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la génération de la fiche',
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -64,7 +177,8 @@ class DocumentController extends Controller
             $paiement = Paiement::with(['candidat'])->findOrFail($paiementId);
             
             // Vérifier les permissions
-            if ($request->user()->role->nom !== 'admin' && $request->user()->id !== $paiement->candidat->utilisateur_id) {
+            $userRole = $request->user()->role->nom_role ?? $request->user()->role->nom ?? '';
+            if ($userRole !== 'admin' && $request->user()->id !== $paiement->candidat->utilisateur_id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Accès non autorisé'
@@ -86,7 +200,7 @@ class DocumentController extends Controller
                 'message' => 'Quitus de paiement généré avec succès',
                 'data' => [
                     'file_path' => $filePath,
-                    'download_url' => route('documents.download', ['path' => base64_encode($filePath)])
+                    'download_url' => Storage::disk('public')->url($filePath)
                 ]
             ]);
 
@@ -94,75 +208,7 @@ class DocumentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la génération du quitus',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Générer la liste des candidats par filière
-     */
-    public function generateListeCandidatsFiliere(Request $request, int $filiereId): JsonResponse
-    {
-        try {
-            // Seuls les admins peuvent générer les listes
-            if ($request->user()->role->nom !== 'admin') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès non autorisé'
-                ], 403);
-            }
-
-            $filePath = $this->documentService->generateListeCandidatsFiliere($filiereId);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Liste des candidats générée avec succès',
-                'data' => [
-                    'file_path' => $filePath,
-                    'download_url' => route('documents.download', ['path' => base64_encode($filePath)])
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la génération de la liste',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Générer la liste des candidats par département
-     */
-    public function generateListeCandidatsDepartement(Request $request, int $departementId): JsonResponse
-    {
-        try {
-            // Seuls les admins peuvent générer les listes
-            if ($request->user()->role->nom !== 'admin') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès non autorisé'
-                ], 403);
-            }
-
-            $filePath = $this->documentService->generateListeCandidatsDepartement($departementId);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Liste des candidats par département générée avec succès',
-                'data' => [
-                    'file_path' => $filePath,
-                    'download_url' => route('documents.download', ['path' => base64_encode($filePath)])
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la génération de la liste',
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -175,51 +221,16 @@ class DocumentController extends Controller
         try {
             $filePath = base64_decode($request->query('path'));
             
-            if (!Storage::exists($filePath)) {
+            if (!Storage::disk('public')->exists($filePath)) {
                 abort(404, 'Document non trouvé');
             }
 
             $fileName = basename($filePath);
             
-            return response()->download(Storage::path($filePath), $fileName);
+            return response()->download(Storage::disk('public')->path($filePath), $fileName);
 
         } catch (\Exception $e) {
             abort(500, 'Erreur lors du téléchargement');
-        }
-    }
-
-    /**
-     * Vérifier l'authenticité d'un QR Code
-     */
-    public function verifyQrCode(Request $request): JsonResponse
-    {
-        try {
-            $validator = Validator::make($request->all(), [
-                'qr_data' => 'required|string'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Données QR Code manquantes',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            $result = $this->documentService->verifyQrCode($request->qr_data);
-            
-            return response()->json([
-                'success' => $result['valid'],
-                'message' => $result['message'],
-                'data' => $result['valid'] ? $result : null
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la vérification du QR Code',
-                'error' => $e->getMessage()
-            ], 500);
         }
     }
 }

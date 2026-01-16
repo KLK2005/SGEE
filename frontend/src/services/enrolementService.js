@@ -12,18 +12,14 @@ export const enrolementService = {
   },
 
   async create(data) {
-    const formData = new FormData()
-    Object.keys(data).forEach(key => {
-      if (data[key] instanceof File) {
-        formData.append(key, data[key])
-      } else if (data[key] !== null && data[key] !== undefined) {
-        formData.append(key, data[key])
-      }
-    })
+    // Handle both FormData and regular objects
+    const isFormData = data instanceof FormData
     
-    const response = await api.post('/enrolements', formData, {
+    const config = isFormData ? {
       headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    } : {}
+    
+    const response = await api.post('/enrolements', data, config)
     return response.data
   },
 
@@ -44,8 +40,13 @@ export const enrolementService = {
     return response.data
   },
 
-  async regenerateFiche(id) {
-    const response = await api.post(`/enrolements/${id}/regenerate-fiche`)
+  async validate(id) {
+    const response = await api.post(`/enrolements/${id}/validate`)
+    return response.data
+  },
+
+  async reject(id) {
+    const response = await api.post(`/enrolements/${id}/reject`)
     return response.data
   },
 }

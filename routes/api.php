@@ -14,6 +14,7 @@ use App\Http\Controllers\CentreExamController;
 use App\Http\Controllers\ConcoursController;
 use App\Http\Controllers\UtilisateurController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\DocumentController;
 
 // Routes publiques
 Route::post('/register', [AuthController::class, 'register']);
@@ -125,11 +126,35 @@ Route::middleware('auth:sanctum')->group(function () {
     // Enrôlements
     Route::apiResource('enrolements', EnrolementController::class);
     Route::get('/enrolements/{id}/download-fiche', [EnrolementController::class, 'downloadFiche']);
+    Route::post('/enrolements/{id}/validate', [EnrolementController::class, 'validateEnrolement']);
+    Route::post('/enrolements/{id}/reject', [EnrolementController::class, 'rejectEnrolement']);
 
     // Paiements
     Route::apiResource('paiements', PaiementController::class);
     Route::post('/paiements/{id}/validate', [PaiementController::class, 'validatePaiement']);
     Route::get('/paiements/{id}/download-quitus', [PaiementController::class, 'downloadQuitus']);
+    
+    // Mes paiements (pour étudiant)
+    Route::get('/mes-paiements', function (Request $request) {
+        $user = $request->user();
+        $candidat = \App\Models\Candidat::where('utilisateur_id', $user->id)->first();
+        
+        if (!$candidat) {
+            return response()->json(['success' => true, 'data' => []]);
+        }
+        
+        $paiements = \App\Models\Paiement::where('candidat_id', $candidat->id)
+            ->with(['enrolement'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        return response()->json(['success' => true, 'data' => $paiements]);
+    });
+
+    // Documents
+    Route::post('/documents/upload', [DocumentController::class, 'upload']);
+    Route::get('/documents/candidat/{candidatId}', [DocumentController::class, 'getByCandidat']);
+    Route::delete('/documents/{id}', [DocumentController::class, 'destroy']);
 
     // Filières
     Route::apiResource('filieres', FiliereController::class);
@@ -170,8 +195,10 @@ Route::middleware('auth:sanctum')->group(function () {
                     'valides' => \App\Models\Paiement::where('statut_paiement', 'valide')->count(),
                     'en_attente' => \App\Models\Paiement::where('statut_paiement', 'en_attente')->count(),
                 ],
-                'repartition_par_filiere' => [],
-                'repartition_par_departement' => [],
+                'filieres' => \App\Models\Filiere::withCount('candidats')->get()->map(fn($f) => [
+                    'nom' => $f->nom_filiere,
+                    'candidats' => $f->candidats_count
+                ]),
             ]
         ]);
     });

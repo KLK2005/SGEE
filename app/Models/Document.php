@@ -7,8 +7,7 @@ use App\Models\Candidat;
 
 class Document extends Model
 {
-    protected $table = 'documents'; // à ajuster si ta table s'appelle autrement
-    public $timestamps = false;
+    protected $table = 'documents';
 
     protected $fillable = [
         'candidat_id',
@@ -16,6 +15,10 @@ class Document extends Model
         'fichier',
         'statut_verification',
         'date_upload'
+    ];
+
+    protected $casts = [
+        'date_upload' => 'datetime'
     ];
 
     // Relation avec le candidat propriétaire du document

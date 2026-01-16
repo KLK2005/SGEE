@@ -30,6 +30,7 @@ class Candidat extends Model
         'concours_id',
         'centre_exam_id',
         'centre_depot_id',
+        'utilisateur_id',         // lien avec l'utilisateur connecté
         'statut_candidat',
         'adresse_complete',       // rue, ville, code postal
         'niveau_etude',           // bac, licence, master…
@@ -41,6 +42,12 @@ class Candidat extends Model
         'handicap',               // oui/non
         'observations'            // notes internes
     ];
+
+    // Relation avec l'utilisateur
+    public function utilisateur()
+    {
+        return $this->belongsTo(Utilisateur::class);
+    }
 
     // Relation avec la filière
     public function filiere()

@@ -221,7 +221,7 @@ class PaiementController extends Controller
     /**
      * Valider un paiement (changer le statut et générer le quitus)
      */
-    public function validate($id): JsonResponse
+    public function validatePaiement($id): JsonResponse
     {
         DB::beginTransaction();
         try {

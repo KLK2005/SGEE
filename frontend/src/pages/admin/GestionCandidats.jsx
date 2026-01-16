@@ -5,11 +5,11 @@ import { enrolementService } from '../../services/enrolementService'
 import toast from 'react-hot-toast'
 import {
   MagnifyingGlassIcon,
-  FunnelIcon,
   EyeIcon,
   CheckCircleIcon,
   XCircleIcon,
   ArrowDownTrayIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline'
 
 export default function GestionCandidats() {
@@ -20,35 +20,36 @@ export default function GestionCandidats() {
 
   const { data: candidatsData, isLoading } = useQuery({
     queryKey: ['admin-candidats', search, statusFilter],
-    queryFn: () => candidatService.getAll({ search, statut: statusFilter }),
+    queryFn: () => candidatService.getAll({ search, statut_candidat: statusFilter }),
   })
 
   const candidats = candidatsData?.data || []
 
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }) => candidatService.changeStatus(id, status),
+  // Mutation pour valider l'enrôlement
+  const validateEnrolementMutation = useMutation({
+    mutationFn: (enrolementId) => enrolementService.validate(enrolementId),
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-candidats'])
-      toast.success('Statut mis à jour')
+      toast.success('Enrôlement validé avec succès')
       setSelectedCandidat(null)
     },
-    onError: () => toast.error('Erreur lors de la mise à jour'),
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Erreur lors de la validation')
+    },
   })
 
-  const handleExport = async (format) => {
-    try {
-      const blob = await candidatService.export(format)
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `candidats.${format}`
-      a.click()
-      window.URL.revokeObjectURL(url)
-      toast.success('Export réussi')
-    } catch (error) {
-      toast.error('Erreur lors de l\'export')
-    }
-  }
+  // Mutation pour rejeter l'enrôlement
+  const rejectEnrolementMutation = useMutation({
+    mutationFn: (enrolementId) => enrolementService.reject(enrolementId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['admin-candidats'])
+      toast.success('Enrôlement rejeté')
+      setSelectedCandidat(null)
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Erreur lors du rejet')
+    },
+  })
 
   const handleDownloadFiche = async (enrolementId) => {
     try {
@@ -59,25 +60,39 @@ export default function GestionCandidats() {
       a.download = `fiche_enrolement.pdf`
       a.click()
       window.URL.revokeObjectURL(url)
+      toast.success('Téléchargement réussi')
     } catch (error) {
       toast.error('Erreur lors du téléchargement')
     }
+  }
+
+  const getStatusBadge = (candidat) => {
+    const status = candidat.enrolement?.statut_enrolement || candidat.statut_candidat || 'nouveau'
+    const styles = {
+      valide: 'bg-green-100 text-green-800',
+      rejete: 'bg-red-100 text-red-800',
+      en_attente: 'bg-yellow-100 text-yellow-800',
+      en_cours: 'bg-blue-100 text-blue-800',
+      nouveau: 'bg-gray-100 text-gray-800',
+    }
+    const labels = {
+      valide: 'Validé',
+      rejete: 'Rejeté',
+      en_attente: 'En attente',
+      en_cours: 'En cours',
+      nouveau: 'Nouveau',
+    }
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status] || styles.nouveau}`}>
+        {labels[status] || status}
+      </span>
+    )
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Gestion des Candidats</h1>
-        <div className="flex gap-2">
-          <button onClick={() => handleExport('csv')} className="btn-secondary flex items-center gap-2">
-            <ArrowDownTrayIcon className="w-4 h-4" />
-            Export CSV
-          </button>
-          <button onClick={() => handleExport('pdf')} className="btn-primary flex items-center gap-2">
-            <ArrowDownTrayIcon className="w-4 h-4" />
-            Export PDF
-          </button>
-        </div>
       </div>
 
       {/* Filters */}
@@ -99,10 +114,37 @@ export default function GestionCandidats() {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">Tous les statuts</option>
-            <option value="en_attente">En attente</option>
+            <option value="nouveau">Nouveau</option>
+            <option value="en_cours">En cours</option>
             <option value="valide">Validé</option>
             <option value="rejete">Rejeté</option>
           </select>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card bg-blue-50">
+          <p className="text-sm text-blue-600">Total</p>
+          <p className="text-2xl font-bold text-blue-700">{candidats.length}</p>
+        </div>
+        <div className="card bg-yellow-50">
+          <p className="text-sm text-yellow-600">En attente</p>
+          <p className="text-2xl font-bold text-yellow-700">
+            {candidats.filter(c => c.enrolement?.statut_enrolement === 'en_attente').length}
+          </p>
+        </div>
+        <div className="card bg-green-50">
+          <p className="text-sm text-green-600">Validés</p>
+          <p className="text-2xl font-bold text-green-700">
+            {candidats.filter(c => c.enrolement?.statut_enrolement === 'valide').length}
+          </p>
+        </div>
+        <div className="card bg-red-50">
+          <p className="text-sm text-red-600">Rejetés</p>
+          <p className="text-2xl font-bold text-red-700">
+            {candidats.filter(c => c.enrolement?.statut_enrolement === 'rejete').length}
+          </p>
         </div>
       </div>
 
@@ -123,7 +165,11 @@ export default function GestionCandidats() {
             <tbody className="divide-y">
               {isLoading ? (
                 <tr>
-                  <td colSpan="6" className="py-8 text-center text-gray-500">Chargement...</td>
+                  <td colSpan="6" className="py-8 text-center text-gray-500">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    </div>
+                  </td>
                 </tr>
               ) : candidats.length === 0 ? (
                 <tr>
@@ -132,26 +178,19 @@ export default function GestionCandidats() {
               ) : (
                 candidats.map((candidat) => (
                   <tr key={candidat.id} className="hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium text-gray-900">{candidat.numero_dossier}</td>
+                    <td className="py-3 px-4 font-medium text-gray-900">{candidat.numero_dossier || '-'}</td>
                     <td className="py-3 px-4">
                       <div>
                         <p className="font-medium text-gray-900">{candidat.nom} {candidat.prenom}</p>
-                        <p className="text-sm text-gray-500">{candidat.email}</p>
+                        <p className="text-sm text-gray-500">{candidat.email || candidat.telephone}</p>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-gray-600">{candidat.filiere?.nom_filiere || candidat.filiere?.nom || '-'}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        candidat.statut_candidat === 'valide' ? 'bg-green-100 text-green-800' :
-                        candidat.statut_candidat === 'rejete' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {candidat.statut_candidat === 'valide' ? 'Validé' :
-                         candidat.statut_candidat === 'rejete' ? 'Rejeté' : 'En attente'}
-                      </span>
-                    </td>
                     <td className="py-3 px-4 text-gray-600">
-                      {new Date(candidat.created_at).toLocaleDateString('fr-FR')}
+                      {candidat.filiere?.nom_filiere || candidat.filiere?.nom || '-'}
+                    </td>
+                    <td className="py-3 px-4">{getStatusBadge(candidat)}</td>
+                    <td className="py-3 px-4 text-gray-600">
+                      {candidat.created_at ? new Date(candidat.created_at).toLocaleDateString('fr-FR') : '-'}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-2">
@@ -162,23 +201,34 @@ export default function GestionCandidats() {
                         >
                           <EyeIcon className="w-5 h-5 text-gray-500" />
                         </button>
-                        {candidat.statut_candidat === 'en_attente' && (
+                        {candidat.enrolement && candidat.enrolement.statut_enrolement === 'en_attente' && (
                           <>
                             <button
-                              onClick={() => updateStatusMutation.mutate({ id: candidat.id, status: 'valide' })}
+                              onClick={() => validateEnrolementMutation.mutate(candidat.enrolement.id)}
                               className="p-2 hover:bg-green-100 rounded-lg"
-                              title="Valider"
+                              title="Valider l'enrôlement"
+                              disabled={validateEnrolementMutation.isPending}
                             >
                               <CheckCircleIcon className="w-5 h-5 text-green-600" />
                             </button>
                             <button
-                              onClick={() => updateStatusMutation.mutate({ id: candidat.id, status: 'rejete' })}
+                              onClick={() => rejectEnrolementMutation.mutate(candidat.enrolement.id)}
                               className="p-2 hover:bg-red-100 rounded-lg"
-                              title="Rejeter"
+                              title="Rejeter l'enrôlement"
+                              disabled={rejectEnrolementMutation.isPending}
                             >
                               <XCircleIcon className="w-5 h-5 text-red-600" />
                             </button>
                           </>
+                        )}
+                        {candidat.enrolement && (
+                          <button
+                            onClick={() => handleDownloadFiche(candidat.enrolement.id)}
+                            className="p-2 hover:bg-blue-100 rounded-lg"
+                            title="Télécharger la fiche"
+                          >
+                            <ArrowDownTrayIcon className="w-5 h-5 text-blue-600" />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -194,8 +244,9 @@ export default function GestionCandidats() {
       {selectedCandidat && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b">
+            <div className="p-6 border-b flex justify-between items-center">
               <h3 className="text-lg font-semibold">Détails du candidat</h3>
+              {getStatusBadge(selectedCandidat)}
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -205,34 +256,88 @@ export default function GestionCandidats() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">N° Dossier</p>
-                  <p className="font-medium">{selectedCandidat.numero_dossier}</p>
+                  <p className="font-medium">{selectedCandidat.numero_dossier || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Date de naissance</p>
-                  <p className="font-medium">{selectedCandidat.date_naissance}</p>
+                  <p className="font-medium">{selectedCandidat.date_naissance || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Lieu de naissance</p>
-                  <p className="font-medium">{selectedCandidat.lieu_naissance}</p>
+                  <p className="font-medium">{selectedCandidat.lieu_naissance || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Téléphone</p>
-                  <p className="font-medium">{selectedCandidat.telephone}</p>
+                  <p className="font-medium">{selectedCandidat.telephone || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium">{selectedCandidat.email || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Filière</p>
-                  <p className="font-medium">{selectedCandidat.filiere?.nom}</p>
+                  <p className="font-medium">{selectedCandidat.filiere?.nom_filiere || selectedCandidat.filiere?.nom || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Nationalité</p>
+                  <p className="font-medium">{selectedCandidat.nationalite || '-'}</p>
                 </div>
               </div>
+
+              {/* Documents */}
+              {selectedCandidat.documents && selectedCandidat.documents.length > 0 && (
+                <div className="pt-4 border-t">
+                  <h4 className="font-medium mb-3">Documents téléversés</h4>
+                  <div className="space-y-2">
+                    {selectedCandidat.documents.map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div className="flex items-center gap-2">
+                          <DocumentTextIcon className="w-5 h-5 text-gray-400" />
+                          <span className="text-sm">{doc.type_document}</span>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          doc.statut_verification === 'valide' ? 'bg-green-100 text-green-700' :
+                          doc.statut_verification === 'rejete' ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {doc.statut_verification}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              {selectedCandidat.enrolement && selectedCandidat.enrolement.statut_enrolement === 'en_attente' && (
+                <div className="pt-4 border-t flex gap-3">
+                  <button
+                    onClick={() => validateEnrolementMutation.mutate(selectedCandidat.enrolement.id)}
+                    className="btn-primary flex items-center gap-2"
+                    disabled={validateEnrolementMutation.isPending}
+                  >
+                    <CheckCircleIcon className="w-5 h-5" />
+                    Valider l'enrôlement
+                  </button>
+                  <button
+                    onClick={() => rejectEnrolementMutation.mutate(selectedCandidat.enrolement.id)}
+                    className="btn-secondary text-red-600 border-red-300 hover:bg-red-50 flex items-center gap-2"
+                    disabled={rejectEnrolementMutation.isPending}
+                  >
+                    <XCircleIcon className="w-5 h-5" />
+                    Rejeter
+                  </button>
+                </div>
+              )}
 
               {selectedCandidat.enrolement && (
                 <div className="pt-4 border-t">
                   <button
                     onClick={() => handleDownloadFiche(selectedCandidat.enrolement.id)}
-                    className="btn-primary flex items-center gap-2"
+                    className="btn-secondary flex items-center gap-2"
                   >
                     <ArrowDownTrayIcon className="w-4 h-4" />
-                    Télécharger la fiche
+                    Télécharger la fiche d'enrôlement
                   </button>
                 </div>
               )}

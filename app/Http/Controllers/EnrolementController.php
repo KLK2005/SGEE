@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\EnrolementRequest;
 use App\Models\Enrolement;
 use App\Models\Candidat;
+use App\Models\Document;
+use App\Models\SessionAcademique;
+use App\Models\Concours;
+use App\Models\CentreDepot;
 use App\Services\PdfService;
 use App\Mail\EnrolementMail;
 use Illuminate\Http\Request;
@@ -72,6 +76,7 @@ class EnrolementController extends Controller
             $enrolement = Enrolement::with([
                 'candidat.filiere',
                 'candidat.filiere.departement',
+                'candidat.documents',
                 'session',
                 'concours',
                 'centreDepot',
@@ -91,51 +96,95 @@ class EnrolementController extends Controller
     }
 
     /**
-     * Créer un nouvel enrôlement
+     * Créer un nouvel enrôlement (simplifié pour les étudiants)
      */
-    public function store(EnrolementRequest $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
+        $request->validate([
+            'candidat_id' => 'required|exists:candidats,id',
+        ]);
+
         DB::beginTransaction();
         try {
             $candidat = Candidat::findOrFail($request->candidat_id);
 
+            // Récupérer la session active ou la première disponible
+            $session = SessionAcademique::where('statut', 'active')
+                ->orWhere('statut', 'ouverte')
+                ->first() ?? SessionAcademique::first();
+            
+            // Récupérer un concours disponible ou null
+            $concours = Concours::where('statut', 'ouvert')
+                ->orWhere('statut', 'actif')
+                ->first() ?? Concours::first();
+            
+            // Récupérer un centre de dépôt ou null
+            $centreDepot = CentreDepot::first();
+
             // Vérifier si le candidat n'est pas déjà enrôlé
-            $existingEnrolement = Enrolement::where('candidat_id', $request->candidat_id)
-                ->where('session_id', $request->session_id)
-                ->first();
+            $existingEnrolement = Enrolement::where('candidat_id', $request->candidat_id)->first();
 
             if ($existingEnrolement) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Ce candidat est déjà enrôlé pour cette session'
+                    'message' => 'Ce candidat est déjà enrôlé'
                 ], 422);
+            }
+
+            // Gérer l'upload des documents
+            $documentTypes = ['photo_identite', 'acte_naissance', 'diplome', 'certificat_nationalite'];
+            foreach ($documentTypes as $docType) {
+                if ($request->hasFile($docType)) {
+                    $file = $request->file($docType);
+                    $path = $file->store('documents/' . $candidat->id, 'public');
+                    
+                    Document::create([
+                        'candidat_id' => $candidat->id,
+                        'type_document' => $docType,
+                        'fichier' => $path,
+                        'statut_verification' => 'en_attente',
+                        'date_upload' => now()
+                    ]);
+                }
             }
 
             // Créer l'enrôlement
             $enrolement = Enrolement::create([
                 'candidat_id' => $request->candidat_id,
-                'concours_id' => $request->concours_id,
-                'session_id' => $request->session_id,
-                'centre_depot_id' => $request->centre_depot_id,
+                'concours_id' => $concours?->id,
+                'session_id' => $session?->id,
+                'centre_depot_id' => $centreDepot?->id,
                 'utilisateur_id' => $request->user()->id,
-                'date_enrolement' => $request->date_enrolement ?? now()->toDateString(),
-                'statut_enrolement' => $request->statut_enrolement ?? 'en_attente',
+                'date_enrolement' => now()->toDateString(),
+                'statut_enrolement' => 'en_attente',
             ]);
 
+            // Mettre à jour le statut du candidat
+            $candidat->update(['statut_candidat' => 'en_cours']);
+
             // Générer la fiche PDF avec QR Code
-            $pdfPath = $this->pdfService->generateEnrolementFiche($enrolement);
+            try {
+                $pdfPath = $this->pdfService->generateEnrolementFiche($enrolement);
+            } catch (\Exception $e) {
+                // Log l'erreur mais ne pas bloquer l'enrôlement
+                \Log::error('Erreur génération PDF: ' . $e->getMessage());
+            }
 
             // Envoyer l'email avec la fiche PDF
             if ($candidat->email) {
-                Mail::to($candidat->email)->send(new EnrolementMail($enrolement));
+                try {
+                    Mail::to($candidat->email)->send(new EnrolementMail($enrolement));
+                } catch (\Exception $e) {
+                    \Log::error('Erreur envoi email: ' . $e->getMessage());
+                }
             }
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Enrôlement créé avec succès. La fiche PDF a été générée et envoyée par email.',
-                'data' => $enrolement->load(['candidat.filiere', 'session', 'concours'])
+                'message' => 'Enrôlement créé avec succès',
+                'data' => $enrolement->load(['candidat.filiere', 'candidat.documents', 'session', 'concours'])
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -150,12 +199,22 @@ class EnrolementController extends Controller
     /**
      * Mettre à jour un enrôlement
      */
-    public function update(EnrolementRequest $request, $id): JsonResponse
+    public function update(Request $request, $id): JsonResponse
     {
         DB::beginTransaction();
         try {
             $enrolement = Enrolement::findOrFail($id);
-            $enrolement->update($request->validated());
+            
+            $enrolement->update($request->only([
+                'statut_enrolement', 'concours_id', 'session_id', 'centre_depot_id'
+            ]));
+
+            // Si validé, mettre à jour le statut du candidat
+            if ($request->statut_enrolement === 'valide') {
+                $enrolement->candidat->update(['statut_candidat' => 'valide']);
+            } elseif ($request->statut_enrolement === 'rejete') {
+                $enrolement->candidat->update(['statut_candidat' => 'rejete']);
+            }
 
             DB::commit();
 
@@ -227,39 +286,70 @@ class EnrolementController extends Controller
     }
 
     /**
-     * Régénérer et renvoyer la fiche d'enrôlement
+     * Valider un enrôlement (admin)
      */
-    public function regenerateFiche($id): JsonResponse
+    public function validateEnrolement($id): JsonResponse
     {
         DB::beginTransaction();
         try {
             $enrolement = Enrolement::findOrFail($id);
-            $candidat = $enrolement->candidat;
+            
+            $enrolement->update(['statut_enrolement' => 'valide']);
+            $enrolement->candidat->update(['statut_candidat' => 'valide']);
 
-            // Supprimer l'ancien PDF
-            if ($enrolement->fiche_pdf_path && Storage::disk('public')->exists($enrolement->fiche_pdf_path)) {
-                Storage::disk('public')->delete($enrolement->fiche_pdf_path);
-            }
-
-            // Régénérer le PDF
-            $this->pdfService->generateEnrolementFiche($enrolement);
-
-            // Renvoyer l'email
-            if ($candidat->email) {
-                Mail::to($candidat->email)->send(new EnrolementMail($enrolement));
+            // Régénérer le PDF avec le nouveau statut
+            try {
+                $this->pdfService->generateEnrolementFiche($enrolement);
+                
+                // Envoyer l'email de confirmation
+                if ($enrolement->candidat->email) {
+                    Mail::to($enrolement->candidat->email)->send(new EnrolementMail($enrolement));
+                }
+            } catch (\Exception $e) {
+                \Log::error('Erreur PDF/Email: ' . $e->getMessage());
             }
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Fiche régénérée et envoyée par email avec succès'
+                'message' => 'Enrôlement validé avec succès',
+                'data' => $enrolement->fresh()->load(['candidat'])
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la régénération',
+                'message' => 'Erreur lors de la validation',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    /**
+     * Rejeter un enrôlement (admin)
+     */
+    public function rejectEnrolement($id): JsonResponse
+    {
+        DB::beginTransaction();
+        try {
+            $enrolement = Enrolement::findOrFail($id);
+            
+            $enrolement->update(['statut_enrolement' => 'rejete']);
+            $enrolement->candidat->update(['statut_candidat' => 'rejete']);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Enrôlement rejeté',
+                'data' => $enrolement->fresh()->load(['candidat'])
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du rejet',
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }

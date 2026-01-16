@@ -23,10 +23,10 @@ class EnrolementRequest extends FormRequest
     {
         return [
             'candidat_id' => ['required', 'exists:candidats,id'],
-            'concours_id' => ['required', 'exists:concours,id'],
-            'session_id' => ['required', 'exists:sessions_academiques,id'],
-            'centre_depot_id' => ['required', 'exists:centre_depot,id'],
-            'date_enrolement' => ['required', 'date'],
+            'concours_id' => ['nullable', 'exists:concours,id'],
+            'session_id' => ['nullable', 'exists:sessions_academiques,id'],
+            'centre_depot_id' => ['nullable', 'exists:centre_depot,id'],
+            'date_enrolement' => ['nullable', 'date'],
             'statut_enrolement' => ['nullable', 'string', 'in:en_attente,valide,rejete'],
         ];
     }
