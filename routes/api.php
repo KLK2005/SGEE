@@ -97,4 +97,43 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/concours', [\App\Http\Controllers\ConcoursController::class, 'store']);
     Route::put('/concours/{id}', [\App\Http\Controllers\ConcoursController::class, 'update']);
     Route::delete('/concours/{id}', [\App\Http\Controllers\ConcoursController::class, 'destroy']);
+
+    // Centre d'examen routes
+    Route::get('/centre-exam', [\App\Http\Controllers\CentreExamController::class, 'index']);
+    Route::get('/centre-exam/{id}', [\App\Http\Controllers\CentreExamController::class, 'show']);
+    Route::post('/centre-exam', [\App\Http\Controllers\CentreExamController::class, 'store']);
+    Route::put('/centre-exam/{id}', [\App\Http\Controllers\CentreExamController::class, 'update']);
+    Route::delete('/centre-exam/{id}', [\App\Http\Controllers\CentreExamController::class, 'destroy']);
+
+    // Statistiques routes (Admin)
+    Route::prefix('statistiques')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\StatistiqueController::class, 'dashboard']);
+        Route::get('/evolution', [\App\Http\Controllers\StatistiqueController::class, 'evolutionInscriptions']);
+        Route::get('/par-filiere', [\App\Http\Controllers\StatistiqueController::class, 'parFiliere']);
+        Route::get('/par-departement', [\App\Http\Controllers\StatistiqueController::class, 'parDepartement']);
+        Route::get('/paiements', [\App\Http\Controllers\StatistiqueController::class, 'paiements']);
+    });
+
+    // Documents routes
+    Route::prefix('documents')->group(function () {
+        Route::get('/fiche-enrolement/{enrolementId}', [\App\Http\Controllers\DocumentController::class, 'downloadFicheEnrolement']);
+        Route::get('/quitus/{paiementId}', [\App\Http\Controllers\DocumentController::class, 'downloadQuitus']);
+        Route::get('/liste-filiere/{filiereId}', [\App\Http\Controllers\DocumentController::class, 'listeParFiliere']);
+        Route::get('/liste-departement/{departementId}', [\App\Http\Controllers\DocumentController::class, 'listeParDepartement']);
+        Route::post('/verify-qrcode', [\App\Http\Controllers\DocumentController::class, 'verifyQrCode']);
+    });
+
+    // Utilisateurs routes (Admin)
+    Route::get('/utilisateurs', [\App\Http\Controllers\UtilisateurController::class, 'index']);
+    Route::get('/utilisateurs/{id}', [\App\Http\Controllers\UtilisateurController::class, 'show']);
+    Route::post('/utilisateurs', [\App\Http\Controllers\UtilisateurController::class, 'store']);
+    Route::put('/utilisateurs/{id}', [\App\Http\Controllers\UtilisateurController::class, 'update']);
+    Route::delete('/utilisateurs/{id}', [\App\Http\Controllers\UtilisateurController::class, 'destroy']);
+
+    // Rôles routes
+    Route::get('/roles', [\App\Http\Controllers\RoleController::class, 'index']);
+    Route::get('/roles/{id}', [\App\Http\Controllers\RoleController::class, 'show']);
+    Route::post('/roles', [\App\Http\Controllers\RoleController::class, 'store']);
+    Route::put('/roles/{id}', [\App\Http\Controllers\RoleController::class, 'update']);
+    Route::delete('/roles/{id}', [\App\Http\Controllers\RoleController::class, 'destroy']);
 });
