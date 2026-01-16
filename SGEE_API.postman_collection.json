@@ -1,0 +1,382 @@
+{
+  "info": {
+    "name": "SGEE API",
+    "description": "Collection Postman pour tester l'API du Système de Gestion d'Enrôlement des Étudiants",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentification",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Doe\",\n  \"prenom\": \"John\",\n  \"email\": \"john.doe@example.com\",\n  \"telephone\": \"+221000000000\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"role_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/register",
+              "host": ["{{base_url}}"],
+              "path": ["register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set(\"token\", jsonData.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@sgee.local\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/logout",
+              "host": ["{{base_url}}"],
+              "path": ["logout"]
+            }
+          }
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user",
+              "host": ["{{base_url}}"],
+              "path": ["user"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enrôlements",
+      "item": [
+        {
+          "name": "Liste des enrôlements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/enrolements",
+              "host": ["{{base_url}}"],
+              "path": ["enrolements"]
+            }
+          }
+        },
+        {
+          "name": "Créer un enrôlement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidat_id\": 1,\n  \"concours_id\": 1,\n  \"session_id\": 1,\n  \"centre_depot_id\": 1,\n  \"date_enrolement\": \"2026-01-16\",\n  \"statut_enrolement\": \"en_attente\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/enrolements",
+              "host": ["{{base_url}}"],
+              "path": ["enrolements"]
+            }
+          }
+        },
+        {
+          "name": "Télécharger fiche PDF",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/enrolements/1/download-fiche",
+              "host": ["{{base_url}}"],
+              "path": ["enrolements", "1", "download-fiche"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Paiements",
+      "item": [
+        {
+          "name": "Liste des paiements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/paiements",
+              "host": ["{{base_url}}"],
+              "path": ["paiements"]
+            }
+          }
+        },
+        {
+          "name": "Créer un paiement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidat_id\": 1,\n  \"enrolement_id\": 1,\n  \"montant\": 50000,\n  \"mode_paiement\": \"virement\",\n  \"reference_transaction\": \"TXN-2026-001\",\n  \"date_paiement\": \"2026-01-16\",\n  \"statut_paiement\": \"en_attente\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/paiements",
+              "host": ["{{base_url}}"],
+              "path": ["paiements"]
+            }
+          }
+        },
+        {
+          "name": "Valider un paiement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/paiements/1/validate",
+              "host": ["{{base_url}}"],
+              "path": ["paiements", "1", "validate"]
+            }
+          }
+        },
+        {
+          "name": "Télécharger quitus PDF",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/paiements/1/download-quitus",
+              "host": ["{{base_url}}"],
+              "path": ["paiements", "1", "download-quitus"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Candidats",
+      "item": [
+        {
+          "name": "Liste des candidats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/candidats?per_page=20&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["candidats"],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Statistiques",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/candidats/stats/stats",
+              "host": ["{{base_url}}"],
+              "path": ["candidats", "stats", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Export CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/candidats/export/export",
+              "host": ["{{base_url}}"],
+              "path": ["candidats", "export", "export"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Administration",
+      "item": [
+        {
+          "name": "Liste des filières",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/filieres",
+              "host": ["{{base_url}}"],
+              "path": ["filieres"]
+            }
+          }
+        },
+        {
+          "name": "Export liste par filière",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/filieres/1/export-liste",
+              "host": ["{{base_url}}"],
+              "path": ["filieres", "1", "export-liste"]
+            }
+          }
+        },
+        {
+          "name": "Liste des départements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/departements",
+              "host": ["{{base_url}}"],
+              "path": ["departements"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
