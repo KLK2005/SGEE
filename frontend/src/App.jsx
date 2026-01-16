@@ -32,7 +32,8 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     return <Navigate to="/login" replace />
   }
   
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role?.nom)) {
+  const userRole = user?.role?.nom_role || user?.role?.nom
+  if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
     return <Navigate to="/" replace />
   }
   
@@ -41,6 +42,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
 function App() {
   const { isAuthenticated, user } = useAuthStore()
+  const userRole = user?.role?.nom_role || user?.role?.nom
 
   return (
     <Routes>
@@ -88,7 +90,7 @@ function App() {
         path="/"
         element={
           isAuthenticated ? (
-            <Navigate to={user?.role?.nom === 'admin' ? '/admin' : '/etudiant'} replace />
+            <Navigate to={userRole === 'admin' ? '/admin' : '/etudiant'} replace />
           ) : (
             <Navigate to="/login" replace />
           )

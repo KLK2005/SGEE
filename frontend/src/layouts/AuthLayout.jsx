@@ -3,9 +3,10 @@ import { useAuthStore } from '../store/authStore'
 
 export default function AuthLayout() {
   const { isAuthenticated, user } = useAuthStore()
+  const userRole = user?.role?.nom_role || user?.role?.nom
 
   if (isAuthenticated) {
-    return <Navigate to={user?.role?.nom === 'admin' ? '/admin' : '/etudiant'} replace />
+    return <Navigate to={userRole === 'admin' ? '/admin' : '/etudiant'} replace />
   }
 
   return (

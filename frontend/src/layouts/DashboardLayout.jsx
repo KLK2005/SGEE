@@ -38,7 +38,8 @@ export default function DashboardLayout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
 
-  const isAdmin = user?.role?.nom === 'admin'
+  const userRole = user?.role?.nom_role || user?.role?.nom
+  const isAdmin = userRole === 'admin'
   const navItems = isAdmin ? adminNavItems : studentNavItems
 
   const handleLogout = async () => {
