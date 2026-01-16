@@ -19,6 +19,99 @@ use App\Http\Controllers\RoleController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+// Vérification QR Code (publique)
+Route::post('/verify-qrcode', function (Request $request) {
+    try {
+        $qrData = $request->input('qr_data');
+        
+        if (!$qrData) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Données QR Code manquantes'
+            ], 400);
+        }
+
+        $data = json_decode($qrData, true);
+        
+        if (!$data || !isset($data['type']) || !isset($data['hash'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Format QR Code invalide'
+            ], 400);
+        }
+
+        // Vérifier le hash
+        if ($data['type'] === 'enrolement') {
+            $enrolement = \App\Models\Enrolement::with('candidat')->find($data['enrolement_id']);
+            if (!$enrolement) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Enrôlement non trouvé'
+                ]);
+            }
+
+            $expectedHash = hash('sha256', $enrolement->id . $enrolement->candidat->numero_dossier . config('app.key'));
+            
+            if ($data['hash'] === $expectedHash) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Document authentique et valide',
+                    'data' => [
+                        'type' => 'enrolement',
+                        'candidat' => [
+                            'nom' => $enrolement->candidat->nom,
+                            'prenom' => $enrolement->candidat->prenom,
+                            'numero_dossier' => $enrolement->candidat->numero_dossier,
+                        ],
+                        'date_enrolement' => $enrolement->created_at->format('d/m/Y'),
+                        'statut' => $enrolement->statut_enrolement,
+                    ]
+                ]);
+            }
+        } elseif ($data['type'] === 'quitus') {
+            $paiement = \App\Models\Paiement::with('candidat')->find($data['paiement_id']);
+            if (!$paiement) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Paiement non trouvé'
+                ]);
+            }
+
+            $expectedHash = hash('sha256', $paiement->id . $paiement->montant . config('app.key'));
+            
+            if ($data['hash'] === $expectedHash) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Quitus authentique et valide',
+                    'data' => [
+                        'type' => 'quitus',
+                        'candidat' => [
+                            'nom' => $paiement->candidat->nom,
+                            'prenom' => $paiement->candidat->prenom,
+                            'numero_dossier' => $paiement->candidat->numero_dossier,
+                        ],
+                        'montant' => $paiement->montant,
+                        'date_paiement' => $paiement->date_paiement,
+                        'statut' => $paiement->statut_paiement,
+                    ]
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Document non authentique ou falsifié'
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de la vérification',
+            'error' => config('app.debug') ? $e->getMessage() : null
+        ], 500);
+    }
+});
+
 // Routes protégées
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);

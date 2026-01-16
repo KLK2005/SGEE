@@ -8,6 +8,8 @@ use App\Models\Enrolement;
 
 class SessionAcademique extends Model
 {
+    protected $table = 'sessions_academiques';
+    
     protected $fillable = [
         'annee',
         'date_debut',
@@ -15,15 +17,13 @@ class SessionAcademique extends Model
         'statut'
     ];
 
-    // Relation avec les concours de cette session académique
     public function concours()
     {
-        return $this->hasMany(Concours::class);
+        return $this->hasMany(Concours::class, 'session_id');
     }
 
-    // Relation avec les enrôlements liés à cette session
     public function enrolements()
     {
-        return $this->hasMany(Enrolement::class);
+        return $this->hasMany(Enrolement::class, 'session_id');
     }
 }

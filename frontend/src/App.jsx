@@ -9,6 +9,9 @@ import DashboardLayout from './layouts/DashboardLayout'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 
+// Public Pages
+import VerifyQrCode from './pages/public/VerifyQrCode'
+
 // Student Pages
 import StudentDashboard from './pages/student/Dashboard'
 import Enrolement from './pages/student/Enrolement'
@@ -46,6 +49,9 @@ function App() {
 
   return (
     <Routes>
+      {/* Public Routes */}
+      <Route path="/verify" element={<VerifyQrCode />} />
+
       {/* Auth Routes */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />

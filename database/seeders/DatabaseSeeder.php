@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             DepartementSeeder::class,
             FiliereSeeder::class,
+            SessionConcoursSeeder::class,
             AdminSeeder::class,
         ]);
     }
