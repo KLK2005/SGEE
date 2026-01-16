@@ -50,17 +50,27 @@ export default function MesDocuments() {
       return
     }
     try {
+      toast.loading('Téléchargement en cours...', { id: 'download-fiche' })
       const blob = await enrolementService.downloadFiche(enrolement.id)
+      
+      // Vérifier si c'est bien un PDF
+      if (blob.size === 0) {
+        throw new Error('Fichier vide')
+      }
+      
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
+      a.style.display = 'none'
       a.href = url
       a.download = `fiche_enrolement_${candidat?.numero_dossier || 'doc'}.pdf`
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
-      toast.success('Téléchargement réussi')
+      toast.success('Téléchargement réussi', { id: 'download-fiche' })
     } catch (error) {
       console.error('Download error:', error)
-      toast.error('Erreur lors du téléchargement')
+      toast.error(error.response?.data?.message || 'Erreur lors du téléchargement', { id: 'download-fiche' })
     }
   }
 
@@ -71,17 +81,27 @@ export default function MesDocuments() {
       return
     }
     try {
+      toast.loading('Téléchargement en cours...', { id: 'download-quitus' })
       const blob = await paiementService.downloadQuitus(paiementValide.id)
+      
+      // Vérifier si c'est bien un PDF
+      if (blob.size === 0) {
+        throw new Error('Fichier vide')
+      }
+      
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
+      a.style.display = 'none'
       a.href = url
       a.download = `quitus_${candidat?.numero_dossier || 'doc'}.pdf`
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
-      toast.success('Téléchargement réussi')
+      toast.success('Téléchargement réussi', { id: 'download-quitus' })
     } catch (error) {
       console.error('Download error:', error)
-      toast.error('Erreur lors du téléchargement')
+      toast.error(error.response?.data?.message || 'Erreur lors du téléchargement', { id: 'download-quitus' })
     }
   }
 

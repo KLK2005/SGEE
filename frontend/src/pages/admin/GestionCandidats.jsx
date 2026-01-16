@@ -53,16 +53,22 @@ export default function GestionCandidats() {
 
   const handleDownloadFiche = async (enrolementId) => {
     try {
+      toast.loading('Téléchargement...', { id: 'dl-fiche' })
       const blob = await enrolementService.downloadFiche(enrolementId)
+      if (blob.size === 0) throw new Error('Fichier vide')
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
+      a.style.display = 'none'
       a.href = url
       a.download = `fiche_enrolement.pdf`
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
-      toast.success('Téléchargement réussi')
+      toast.success('Téléchargé', { id: 'dl-fiche' })
     } catch (error) {
-      toast.error('Erreur lors du téléchargement')
+      console.error('Download error:', error)
+      toast.error('Erreur lors du téléchargement', { id: 'dl-fiche' })
     }
   }
 

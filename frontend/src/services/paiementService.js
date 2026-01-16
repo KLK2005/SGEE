@@ -44,8 +44,11 @@ export const paiementService = {
 
   async downloadQuitus(id) {
     const response = await api.get(`/paiements/${id}/download-quitus`, {
-      responseType: 'blob'
+      responseType: 'blob',
+      headers: {
+        'Accept': 'application/pdf,*/*'
+      }
     })
-    return response.data
+    return new Blob([response.data], { type: 'application/pdf' })
   },
 }

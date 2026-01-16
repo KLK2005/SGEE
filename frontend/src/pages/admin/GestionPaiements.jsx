@@ -44,15 +44,22 @@ export default function GestionPaiements() {
 
   const handleDownloadQuitus = async (paiementId) => {
     try {
+      toast.loading('Téléchargement...', { id: 'dl-quitus' })
       const blob = await paiementService.downloadQuitus(paiementId)
+      if (blob.size === 0) throw new Error('Fichier vide')
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
+      a.style.display = 'none'
       a.href = url
       a.download = `quitus_${paiementId}.pdf`
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
+      toast.success('Téléchargé', { id: 'dl-quitus' })
     } catch (error) {
-      toast.error('Erreur lors du téléchargement')
+      console.error('Download error:', error)
+      toast.error('Erreur lors du téléchargement', { id: 'dl-quitus' })
     }
   }
 
