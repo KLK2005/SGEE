@@ -139,7 +139,7 @@ export default function GestionCandidats() {
                         <p className="text-sm text-gray-500">{candidat.email}</p>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-gray-600">{candidat.filiere?.nom || '-'}</td>
+                    <td className="py-3 px-4 text-gray-600">{candidat.filiere?.nom_filiere || candidat.filiere?.nom || '-'}</td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         candidat.statut_candidat === 'valide' ? 'bg-green-100 text-green-800' :

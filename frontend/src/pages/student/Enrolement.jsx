@@ -197,15 +197,15 @@ export default function Enrolement() {
               <input type="tel" className="input-field" {...register('telephone', { required: 'Requis' })} />
             </div>
 
-            <div>
-              <label className="label">Filière souhaitée</label>
-              <select className="input-field" {...register('filiere_id', { required: 'Requis' })}>
-                <option value="">Sélectionner une filière</option>
-                {filieres.map((f) => (
-                  <option key={f.id} value={f.id}>{f.nom}</option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label className="label">Filière souhaitée</label>
+                <select className="input-field" {...register('filiere_id', { required: 'Requis' })}>
+                  <option value="">Sélectionner une filière</option>
+                  {filieres.map((f) => (
+                    <option key={f.id} value={f.id}>{f.nom_filiere || f.nom}</option>
+                  ))}
+                </select>
+              </div>
 
             <button type="submit" className="btn-primary w-full" disabled={createCandidatMutation.isPending}>
               {createCandidatMutation.isPending ? 'Enregistrement...' : 'Continuer'}
