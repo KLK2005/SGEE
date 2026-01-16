@@ -19,7 +19,7 @@ class FiliereController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $filieres = Filiere::with('departement')->get();
+            $filieres = Filiere::with('departement')->withCount('candidats')->get();
             return response()->json([
                 'success' => true,
                 'data' => $filieres

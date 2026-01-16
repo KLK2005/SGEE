@@ -19,7 +19,9 @@ class DepartementController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $departements = Departement::with('filieres')->get();
+            $departements = Departement::with(['filieres' => function($q) {
+                $q->withCount('candidats');
+            }])->get();
             return response()->json([
                 'success' => true,
                 'data' => $departements

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { candidatService } from '../../services/candidatService'
 import { enrolementService } from '../../services/enrolementService'
+import { filiereService } from '../../services/filiereService'
 import toast from 'react-hot-toast'
 import {
   MagnifyingGlassIcon,
@@ -10,45 +11,76 @@ import {
   XCircleIcon,
   ArrowDownTrayIcon,
   DocumentTextIcon,
+  TableCellsIcon,
+  PencilIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline'
 
 export default function GestionCandidats() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [filiereFilter, setFiliereFilter] = useState('')
   const [selectedCandidat, setSelectedCandidat] = useState(null)
+  const [editMode, setEditMode] = useState(false)
+  const [editData, setEditData] = useState({})
 
   const { data: candidatsData, isLoading } = useQuery({
-    queryKey: ['admin-candidats', search, statusFilter],
-    queryFn: () => candidatService.getAll({ search, statut_candidat: statusFilter }),
+    queryKey: ['admin-candidats', search, statusFilter, filiereFilter],
+    queryFn: () => candidatService.getAll({ 
+      search, 
+      statut_candidat: statusFilter,
+      filiere_id: filiereFilter 
+    }),
+  })
+
+  const { data: filieresData } = useQuery({
+    queryKey: ['filieres-list'],
+    queryFn: () => filiereService.getAll(),
   })
 
   const candidats = candidatsData?.data || []
+  const filieres = filieresData?.data || []
 
-  // Mutation pour valider l'enrôlement
-  const validateEnrolementMutation = useMutation({
+  const validateMutation = useMutation({
     mutationFn: (enrolementId) => enrolementService.validate(enrolementId),
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-candidats'])
-      toast.success('Enrôlement validé avec succès')
+      toast.success('Enrôlement validé')
       setSelectedCandidat(null)
     },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Erreur lors de la validation')
-    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Erreur'),
   })
 
-  // Mutation pour rejeter l'enrôlement
-  const rejectEnrolementMutation = useMutation({
+  const rejectMutation = useMutation({
     mutationFn: (enrolementId) => enrolementService.reject(enrolementId),
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-candidats'])
       toast.success('Enrôlement rejeté')
       setSelectedCandidat(null)
     },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Erreur lors du rejet')
+    onError: (error) => toast.error(error.response?.data?.message || 'Erreur'),
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => candidatService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['admin-candidats'])
+      toast.success('Candidat mis à jour')
+      setEditMode(false)
+      setSelectedCandidat(null)
     },
+    onError: () => toast.error('Erreur lors de la mise à jour'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => candidatService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['admin-candidats'])
+      toast.success('Candidat supprimé')
+      setSelectedCandidat(null)
+    },
+    onError: () => toast.error('Erreur lors de la suppression'),
   })
 
   const handleDownloadFiche = async (enrolementId) => {
@@ -67,9 +99,46 @@ export default function GestionCandidats() {
       window.URL.revokeObjectURL(url)
       toast.success('Téléchargé', { id: 'dl-fiche' })
     } catch (error) {
-      console.error('Download error:', error)
-      toast.error('Erreur lors du téléchargement', { id: 'dl-fiche' })
+      toast.error('Erreur téléchargement', { id: 'dl-fiche' })
     }
+  }
+
+  const handleExportCsv = async () => {
+    try {
+      toast.loading('Export en cours...', { id: 'export' })
+      const blob = await candidatService.exportCsv({
+        filiere_id: filiereFilter,
+        statut: statusFilter,
+      })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `candidats_${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('Export réussi', { id: 'export' })
+    } catch (error) {
+      toast.error('Erreur export', { id: 'export' })
+    }
+  }
+
+  const openEdit = (candidat) => {
+    setSelectedCandidat(candidat)
+    setEditData({
+      nom: candidat.nom,
+      prenom: candidat.prenom,
+      telephone: candidat.telephone,
+      email: candidat.email,
+      date_naissance: candidat.date_naissance,
+      lieu_naissance: candidat.lieu_naissance,
+      nationalite: candidat.nationalite,
+      filiere_id: candidat.filiere_id,
+    })
+    setEditMode(true)
+  }
+
+  const handleUpdate = () => {
+    updateMutation.mutate({ id: selectedCandidat.id, data: editData })
   }
 
   const getStatusBadge = (candidat) => {
@@ -82,11 +151,8 @@ export default function GestionCandidats() {
       nouveau: 'bg-gray-100 text-gray-800',
     }
     const labels = {
-      valide: 'Validé',
-      rejete: 'Rejeté',
-      en_attente: 'En attente',
-      en_cours: 'En cours',
-      nouveau: 'Nouveau',
+      valide: 'Validé', rejete: 'Rejeté', en_attente: 'En attente',
+      en_cours: 'En cours', nouveau: 'Nouveau',
     }
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status] || styles.nouveau}`}>
@@ -99,6 +165,10 @@ export default function GestionCandidats() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Gestion des Candidats</h1>
+        <button onClick={handleExportCsv} className="btn-secondary flex items-center gap-2">
+          <TableCellsIcon className="w-5 h-5" />
+          Exporter Excel
+        </button>
       </div>
 
       {/* Filters */}
@@ -124,6 +194,16 @@ export default function GestionCandidats() {
             <option value="en_cours">En cours</option>
             <option value="valide">Validé</option>
             <option value="rejete">Rejeté</option>
+          </select>
+          <select
+            className="input-field w-full md:w-48"
+            value={filiereFilter}
+            onChange={(e) => setFiliereFilter(e.target.value)}
+          >
+            <option value="">Toutes les filières</option>
+            {filieres.map(f => (
+              <option key={f.id} value={f.id}>{f.nom_filiere}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -171,7 +251,7 @@ export default function GestionCandidats() {
             <tbody className="divide-y">
               {isLoading ? (
                 <tr>
-                  <td colSpan="6" className="py-8 text-center text-gray-500">
+                  <td colSpan="6" className="py-8 text-center">
                     <div className="flex justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                     </div>
@@ -186,56 +266,47 @@ export default function GestionCandidats() {
                   <tr key={candidat.id} className="hover:bg-gray-50">
                     <td className="py-3 px-4 font-medium text-gray-900">{candidat.numero_dossier || '-'}</td>
                     <td className="py-3 px-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{candidat.nom} {candidat.prenom}</p>
-                        <p className="text-sm text-gray-500">{candidat.email || candidat.telephone}</p>
-                      </div>
+                      <p className="font-medium text-gray-900">{candidat.nom} {candidat.prenom}</p>
+                      <p className="text-sm text-gray-500">{candidat.email || candidat.telephone}</p>
                     </td>
-                    <td className="py-3 px-4 text-gray-600">
-                      {candidat.filiere?.nom_filiere || candidat.filiere?.nom || '-'}
-                    </td>
+                    <td className="py-3 px-4 text-gray-600">{candidat.filiere?.nom_filiere || '-'}</td>
                     <td className="py-3 px-4">{getStatusBadge(candidat)}</td>
                     <td className="py-3 px-4 text-gray-600">
                       {candidat.created_at ? new Date(candidat.created_at).toLocaleDateString('fr-FR') : '-'}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setSelectedCandidat(candidat)}
-                          className="p-2 hover:bg-gray-100 rounded-lg"
-                          title="Voir détails"
-                        >
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => { setSelectedCandidat(candidat); setEditMode(false) }}
+                          className="p-2 hover:bg-gray-100 rounded-lg" title="Voir">
                           <EyeIcon className="w-5 h-5 text-gray-500" />
                         </button>
-                        {candidat.enrolement && candidat.enrolement.statut_enrolement === 'en_attente' && (
+                        <button onClick={() => openEdit(candidat)}
+                          className="p-2 hover:bg-blue-100 rounded-lg" title="Modifier">
+                          <PencilIcon className="w-5 h-5 text-blue-600" />
+                        </button>
+                        {candidat.enrolement?.statut_enrolement === 'en_attente' && (
                           <>
-                            <button
-                              onClick={() => validateEnrolementMutation.mutate(candidat.enrolement.id)}
-                              className="p-2 hover:bg-green-100 rounded-lg"
-                              title="Valider l'enrôlement"
-                              disabled={validateEnrolementMutation.isPending}
-                            >
+                            <button onClick={() => validateMutation.mutate(candidat.enrolement.id)}
+                              className="p-2 hover:bg-green-100 rounded-lg" title="Valider">
                               <CheckCircleIcon className="w-5 h-5 text-green-600" />
                             </button>
-                            <button
-                              onClick={() => rejectEnrolementMutation.mutate(candidat.enrolement.id)}
-                              className="p-2 hover:bg-red-100 rounded-lg"
-                              title="Rejeter l'enrôlement"
-                              disabled={rejectEnrolementMutation.isPending}
-                            >
+                            <button onClick={() => rejectMutation.mutate(candidat.enrolement.id)}
+                              className="p-2 hover:bg-red-100 rounded-lg" title="Rejeter">
                               <XCircleIcon className="w-5 h-5 text-red-600" />
                             </button>
                           </>
                         )}
                         {candidat.enrolement && (
-                          <button
-                            onClick={() => handleDownloadFiche(candidat.enrolement.id)}
-                            className="p-2 hover:bg-blue-100 rounded-lg"
-                            title="Télécharger la fiche"
-                          >
+                          <button onClick={() => handleDownloadFiche(candidat.enrolement.id)}
+                            className="p-2 hover:bg-blue-100 rounded-lg" title="Télécharger fiche">
                             <ArrowDownTrayIcon className="w-5 h-5 text-blue-600" />
                           </button>
                         )}
+                        <button onClick={() => {
+                          if (confirm('Supprimer ce candidat ?')) deleteMutation.mutate(candidat.id)
+                        }} className="p-2 hover:bg-red-100 rounded-lg" title="Supprimer">
+                          <TrashIcon className="w-5 h-5 text-red-600" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -246,112 +317,140 @@ export default function GestionCandidats() {
         </div>
       </div>
 
-      {/* Detail Modal */}
+      {/* Detail/Edit Modal */}
       {selectedCandidat && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Détails du candidat</h3>
-              {getStatusBadge(selectedCandidat)}
+              <h3 className="text-lg font-semibold">
+                {editMode ? 'Modifier le candidat' : 'Détails du candidat'}
+              </h3>
+              {!editMode && getStatusBadge(selectedCandidat)}
             </div>
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Nom complet</p>
-                  <p className="font-medium">{selectedCandidat.nom} {selectedCandidat.prenom}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">N° Dossier</p>
-                  <p className="font-medium">{selectedCandidat.numero_dossier || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Date de naissance</p>
-                  <p className="font-medium">{selectedCandidat.date_naissance || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Lieu de naissance</p>
-                  <p className="font-medium">{selectedCandidat.lieu_naissance || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Téléphone</p>
-                  <p className="font-medium">{selectedCandidat.telephone || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium">{selectedCandidat.email || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Filière</p>
-                  <p className="font-medium">{selectedCandidat.filiere?.nom_filiere || selectedCandidat.filiere?.nom || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Nationalité</p>
-                  <p className="font-medium">{selectedCandidat.nationalite || '-'}</p>
-                </div>
-              </div>
-
-              {/* Documents */}
-              {selectedCandidat.documents && selectedCandidat.documents.length > 0 && (
-                <div className="pt-4 border-t">
-                  <h4 className="font-medium mb-3">Documents téléversés</h4>
-                  <div className="space-y-2">
-                    {selectedCandidat.documents.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <div className="flex items-center gap-2">
-                          <DocumentTextIcon className="w-5 h-5 text-gray-400" />
-                          <span className="text-sm">{doc.type_document}</span>
-                        </div>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          doc.statut_verification === 'valide' ? 'bg-green-100 text-green-700' :
-                          doc.statut_verification === 'rejete' ? 'bg-red-100 text-red-700' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {doc.statut_verification}
-                        </span>
-                      </div>
-                    ))}
+              {editMode ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Nom</label>
+                    <input type="text" className="input-field" value={editData.nom}
+                      onChange={(e) => setEditData({...editData, nom: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="label">Prénom</label>
+                    <input type="text" className="input-field" value={editData.prenom}
+                      onChange={(e) => setEditData({...editData, prenom: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="label">Téléphone</label>
+                    <input type="text" className="input-field" value={editData.telephone || ''}
+                      onChange={(e) => setEditData({...editData, telephone: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="label">Email</label>
+                    <input type="email" className="input-field" value={editData.email || ''}
+                      onChange={(e) => setEditData({...editData, email: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="label">Date de naissance</label>
+                    <input type="date" className="input-field" value={editData.date_naissance || ''}
+                      onChange={(e) => setEditData({...editData, date_naissance: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="label">Lieu de naissance</label>
+                    <input type="text" className="input-field" value={editData.lieu_naissance || ''}
+                      onChange={(e) => setEditData({...editData, lieu_naissance: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="label">Nationalité</label>
+                    <input type="text" className="input-field" value={editData.nationalite || ''}
+                      onChange={(e) => setEditData({...editData, nationalite: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="label">Filière</label>
+                    <select className="input-field" value={editData.filiere_id || ''}
+                      onChange={(e) => setEditData({...editData, filiere_id: e.target.value})}>
+                      <option value="">Sélectionner</option>
+                      {filieres.map(f => <option key={f.id} value={f.id}>{f.nom_filiere}</option>)}
+                    </select>
                   </div>
                 </div>
-              )}
-
-              {/* Actions */}
-              {selectedCandidat.enrolement && selectedCandidat.enrolement.statut_enrolement === 'en_attente' && (
-                <div className="pt-4 border-t flex gap-3">
-                  <button
-                    onClick={() => validateEnrolementMutation.mutate(selectedCandidat.enrolement.id)}
-                    className="btn-primary flex items-center gap-2"
-                    disabled={validateEnrolementMutation.isPending}
-                  >
-                    <CheckCircleIcon className="w-5 h-5" />
-                    Valider l'enrôlement
-                  </button>
-                  <button
-                    onClick={() => rejectEnrolementMutation.mutate(selectedCandidat.enrolement.id)}
-                    className="btn-secondary text-red-600 border-red-300 hover:bg-red-50 flex items-center gap-2"
-                    disabled={rejectEnrolementMutation.isPending}
-                  >
-                    <XCircleIcon className="w-5 h-5" />
-                    Rejeter
-                  </button>
-                </div>
-              )}
-
-              {selectedCandidat.enrolement && (
-                <div className="pt-4 border-t">
-                  <button
-                    onClick={() => handleDownloadFiche(selectedCandidat.enrolement.id)}
-                    className="btn-secondary flex items-center gap-2"
-                  >
-                    <ArrowDownTrayIcon className="w-4 h-4" />
-                    Télécharger la fiche d'enrôlement
-                  </button>
-                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><p className="text-sm text-gray-500">Nom complet</p>
+                      <p className="font-medium">{selectedCandidat.nom} {selectedCandidat.prenom}</p></div>
+                    <div><p className="text-sm text-gray-500">N° Dossier</p>
+                      <p className="font-medium">{selectedCandidat.numero_dossier || '-'}</p></div>
+                    <div><p className="text-sm text-gray-500">Date de naissance</p>
+                      <p className="font-medium">{selectedCandidat.date_naissance || '-'}</p></div>
+                    <div><p className="text-sm text-gray-500">Lieu de naissance</p>
+                      <p className="font-medium">{selectedCandidat.lieu_naissance || '-'}</p></div>
+                    <div><p className="text-sm text-gray-500">Téléphone</p>
+                      <p className="font-medium">{selectedCandidat.telephone || '-'}</p></div>
+                    <div><p className="text-sm text-gray-500">Email</p>
+                      <p className="font-medium">{selectedCandidat.email || '-'}</p></div>
+                    <div><p className="text-sm text-gray-500">Filière</p>
+                      <p className="font-medium">{selectedCandidat.filiere?.nom_filiere || '-'}</p></div>
+                    <div><p className="text-sm text-gray-500">Nationalité</p>
+                      <p className="font-medium">{selectedCandidat.nationalite || '-'}</p></div>
+                  </div>
+                  {selectedCandidat.documents?.length > 0 && (
+                    <div className="pt-4 border-t">
+                      <h4 className="font-medium mb-3">Documents téléversés</h4>
+                      <div className="space-y-2">
+                        {selectedCandidat.documents.map((doc) => (
+                          <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <div className="flex items-center gap-2">
+                              <DocumentTextIcon className="w-5 h-5 text-gray-400" />
+                              <span className="text-sm">{doc.type_document}</span>
+                            </div>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              doc.statut_verification === 'valide' ? 'bg-green-100 text-green-700' :
+                              doc.statut_verification === 'rejete' ? 'bg-red-100 text-red-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>{doc.statut_verification}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedCandidat.enrolement?.statut_enrolement === 'en_attente' && (
+                    <div className="pt-4 border-t flex gap-3">
+                      <button onClick={() => validateMutation.mutate(selectedCandidat.enrolement.id)}
+                        className="btn-primary flex items-center gap-2">
+                        <CheckCircleIcon className="w-5 h-5" /> Valider
+                      </button>
+                      <button onClick={() => rejectMutation.mutate(selectedCandidat.enrolement.id)}
+                        className="btn-secondary text-red-600 flex items-center gap-2">
+                        <XCircleIcon className="w-5 h-5" /> Rejeter
+                      </button>
+                    </div>
+                  )}
+                  {selectedCandidat.enrolement && (
+                    <div className="pt-4 border-t">
+                      <button onClick={() => handleDownloadFiche(selectedCandidat.enrolement.id)}
+                        className="btn-secondary flex items-center gap-2">
+                        <ArrowDownTrayIcon className="w-4 h-4" /> Télécharger la fiche
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
-            <div className="p-6 border-t flex justify-end">
-              <button onClick={() => setSelectedCandidat(null)} className="btn-secondary">
-                Fermer
-              </button>
+            <div className="p-6 border-t flex justify-end gap-3">
+              {editMode ? (
+                <>
+                  <button onClick={() => { setEditMode(false); setSelectedCandidat(null) }} className="btn-secondary">Annuler</button>
+                  <button onClick={handleUpdate} className="btn-primary" disabled={updateMutation.isPending}>
+                    {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => openEdit(selectedCandidat)} className="btn-secondary">Modifier</button>
+                  <button onClick={() => setSelectedCandidat(null)} className="btn-primary">Fermer</button>
+                </>
+              )}
             </div>
           </div>
         </div>

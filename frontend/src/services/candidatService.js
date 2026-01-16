@@ -31,19 +31,14 @@ export const candidatService = {
     return response.data
   },
 
-  async getStats() {
-    const response = await api.get('/candidats/stats/stats')
-    return response.data
-  },
-
   async changeStatus(id, status) {
     const response = await api.patch(`/candidats/${id}/status`, { statut: status })
     return response.data
   },
 
-  async export(format = 'csv') {
-    const response = await api.get('/candidats/export/export', { 
-      params: { format },
+  async exportCsv(params = {}) {
+    const response = await api.get('/export/candidats', { 
+      params,
       responseType: 'blob'
     })
     return response.data

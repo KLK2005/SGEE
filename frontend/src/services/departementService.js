@@ -26,9 +26,22 @@ export const departementService = {
     return response.data
   },
 
-  async exportListe(id, format = 'pdf') {
+  async exportListePdf(id) {
     const response = await api.get(`/departements/${id}/export-liste`, {
-      params: { format },
+      responseType: 'blob'
+    })
+    return response.data
+  },
+
+  async exportListeCsv(id) {
+    const response = await api.get(`/departements/${id}/export-csv`, {
+      responseType: 'blob'
+    })
+    return response.data
+  },
+
+  async exportAllCsv() {
+    const response = await api.get('/export/departements', {
       responseType: 'blob'
     })
     return response.data

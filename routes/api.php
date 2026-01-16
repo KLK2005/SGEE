@@ -15,6 +15,7 @@ use App\Http\Controllers\ConcoursController;
 use App\Http\Controllers\UtilisateurController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\ExportController;
 
 // Routes publiques
 Route::post('/register', [AuthController::class, 'register']);
@@ -215,6 +216,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Départements
     Route::apiResource('departements', DepartementController::class);
+    Route::get('/departements/{id}/export-liste', [DepartementController::class, 'exportListe']);
+    Route::get('/departements/{id}/export-csv', [ExportController::class, 'exportCandidatsByDepartement']);
+
+    // Exports CSV/Excel
+    Route::get('/export/candidats', [ExportController::class, 'exportCandidats']);
+    Route::get('/export/departements', [ExportController::class, 'exportDepartements']);
+    Route::get('/export/filieres', [ExportController::class, 'exportFilieres']);
 
     // Sessions académiques
     Route::apiResource('sessions-academiques', SessionAcademiqueController::class);

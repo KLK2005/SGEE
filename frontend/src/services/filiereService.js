@@ -26,9 +26,9 @@ export const filiereService = {
     return response.data
   },
 
-  async exportListe(id, format = 'pdf') {
-    const response = await api.get(`/filieres/${id}/export-liste`, {
-      params: { format },
+  async exportCsv(params = {}) {
+    const response = await api.get('/export/filieres', {
+      params,
       responseType: 'blob'
     })
     return response.data
