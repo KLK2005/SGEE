@@ -35,12 +35,9 @@ export const enrolementService = {
 
   async downloadFiche(id) {
     const response = await api.get(`/enrolements/${id}/download-fiche`, {
-      responseType: 'blob',
-      headers: {
-        'Accept': 'application/pdf,*/*'
-      }
+      responseType: 'blob'
     })
-    return new Blob([response.data], { type: 'application/pdf' })
+    return response.data
   },
 
   async validate(id) {

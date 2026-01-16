@@ -18,6 +18,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    // Don't set Accept header for blob requests
+    if (config.responseType === 'blob') {
+      delete config.headers['Accept']
+    }
     return config
   },
   (error) => Promise.reject(error)
@@ -27,6 +31,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Don't redirect for blob requests that fail
+    if (error.config?.responseType === 'blob') {
+      return Promise.reject(error)
+    }
     if (error.response?.status === 401) {
       useAuthStore.getState().logout()
       window.location.href = '/login'
