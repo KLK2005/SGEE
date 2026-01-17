@@ -3,18 +3,28 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Enrolement;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class CentreDepot extends Model
 {
-    protected $table = 'centre_depot'; // nom exact de la table
+    use HasFactory;
+
+    protected $table = 'centre_depots';
 
     protected $fillable = [
         'nom_centre',
-        'ville',
+        'code_centre',
         'adresse',
-        'responsable',
-        'telephone'
+        'ville',
+        'telephone',
+        'email',
+        'horaires',
+        'services',
+        'actif',
+    ];
+
+    protected $casts = [
+        'actif' => 'boolean',
     ];
 
     // Relation avec les enrôlements

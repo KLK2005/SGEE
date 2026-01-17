@@ -12,14 +12,16 @@ return new class extends Migration
     public function up(): void
     {
        Schema::create('documents', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('candidat_id')->constrained('candidats');
-    $table->string('type_document');
-    $table->string('fichier');
-    $table->string('statut_verification');
-    $table->date('date_upload');
-});
-
+            $table->id();
+            $table->foreignId('candidat_id')->constrained('candidats')->onDelete('cascade');
+            $table->string('type_document');
+            $table->string('fichier');
+            $table->string('statut_verification')->default('en_attente');
+            $table->text('motif_rejet')->nullable();
+            $table->timestamp('date_upload')->useCurrent();
+            $table->timestamp('date_verification')->nullable();
+            $table->timestamps(); // Ajoute created_at et updated_at
+        });
     }
 
     /**

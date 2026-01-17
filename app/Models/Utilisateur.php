@@ -30,6 +30,9 @@ class Utilisateur extends Authenticatable
         'statut',
         'dernier_login',
         'adresse_ip',
+        'oauth_provider',
+        'oauth_provider_id',
+        'avatar',
     ];
 
     /**
@@ -38,6 +41,7 @@ class Utilisateur extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'oauth_provider_id',
     ];
 
     /**

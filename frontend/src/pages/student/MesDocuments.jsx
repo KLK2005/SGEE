@@ -44,6 +44,15 @@ export default function MesDocuments() {
   const paiements = paiementsData?.data || []
   const isLoading = loadingEnrolement || loadingDocs
 
+  // Debug: Afficher les données dans la console
+  console.log('Debug MesDocuments:', {
+    candidat,
+    enrolement,
+    uploadedDocs: uploadedDocs.length,
+    documentsData,
+    enrolementData
+  })
+
   const handleDownloadFiche = async () => {
     if (!enrolement?.id) {
       toast.error('Aucun enrôlement trouvé')
@@ -117,8 +126,9 @@ export default function MesDocuments() {
     try {
       await documentService.upload(candidat.id, typeDocument, file)
       toast.success('Document uploadé avec succès')
-      queryClient.invalidateQueries(['my-documents'])
+      queryClient.invalidateQueries(['mes-documents'])
     } catch (error) {
+      console.error('Upload error:', error)
       toast.error(error.response?.data?.message || 'Erreur lors de l\'upload')
     } finally {
       setUploading(null)
@@ -147,10 +157,20 @@ export default function MesDocuments() {
 
   if (!candidat) {
     return (
-      <div className="card text-center">
-        <DocumentTextIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Aucun document disponible</h2>
-        <p className="text-gray-600">Vous devez d'abord créer votre dossier d'enrôlement.</p>
+      <div className="card text-center py-12">
+        <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          Aucun dossier de candidature trouvé
+        </h3>
+        <p className="text-gray-600 mb-6">
+          Vous devez d'abord créer votre dossier d'enrôlement avant de pouvoir uploader des documents.
+        </p>
+        <a
+          href="/etudiant/enrolement"
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700"
+        >
+          Créer mon dossier d'enrôlement
+        </a>
       </div>
     )
   }

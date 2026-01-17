@@ -9,6 +9,7 @@ import DashboardLayout from './layouts/DashboardLayout'
 // Auth Pages
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import OAuthCallback from './pages/auth/OAuthCallback'
 
 // Public Pages
 import Home from './pages/public/Home'
@@ -25,6 +26,9 @@ import AdminDashboard from './pages/admin/Dashboard'
 import GestionCandidats from './pages/admin/GestionCandidats'
 import GestionFilieres from './pages/admin/GestionFilieres'
 import GestionDepartements from './pages/admin/GestionDepartements'
+import GestionEcoles from './pages/admin/GestionEcoles'
+import GestionCentresExamen from './pages/admin/GestionCentresExamen'
+import GestionCentresDepot from './pages/admin/GestionCentresDepot'
 import GestionPaiements from './pages/admin/GestionPaiements'
 import GestionDocuments from './pages/admin/GestionDocuments'
 import Statistiques from './pages/admin/Statistiques'
@@ -63,6 +67,9 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
         </Route>
+        
+        {/* OAuth Callback Route */}
+        <Route path="/auth/callback" element={<OAuthCallback />} />
 
         {/* Student Routes */}
         <Route
@@ -92,6 +99,9 @@ function App() {
           <Route path="candidats" element={<GestionCandidats />} />
           <Route path="filieres" element={<GestionFilieres />} />
           <Route path="departements" element={<GestionDepartements />} />
+          <Route path="ecoles" element={<GestionEcoles />} />
+          <Route path="centres-examen" element={<GestionCentresExamen />} />
+          <Route path="centres-depot" element={<GestionCentresDepot />} />
           <Route path="paiements" element={<GestionPaiements />} />
           <Route path="documents" element={<GestionDocuments />} />
           <Route path="statistiques" element={<Statistiques />} />

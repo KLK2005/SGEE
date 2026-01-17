@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\CandidatController;
 use App\Http\Controllers\EnrolementController;
 use App\Http\Controllers\PaiementController;
@@ -16,10 +17,16 @@ use App\Http\Controllers\UtilisateurController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\EcoleController;
+use App\Http\Controllers\CentreExamenController;
 
 // Routes publiques
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// Routes OAuth
+Route::get('/auth/{provider}', [SocialAuthController::class, 'redirectToProvider']);
+Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'handleProviderCallback']);
 
 // Vérification QR Code (publique)
 Route::post('/verify-qrcode', function (Request $request) {
@@ -118,6 +125,10 @@ Route::post('/verify-qrcode', function (Request $request) {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+
+    // OAuth - Lier/Délier compte
+    Route::post('/auth/{provider}/link', [SocialAuthController::class, 'linkProvider']);
+    Route::post('/auth/unlink', [SocialAuthController::class, 'unlinkProvider']);
 
     // Candidats
     Route::apiResource('candidats', CandidatController::class);
@@ -221,6 +232,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('departements', DepartementController::class);
     Route::get('/departements/{id}/export-liste', [DepartementController::class, 'exportListe']);
     Route::get('/departements/{id}/export-csv', [ExportController::class, 'exportCandidatsByDepartement']);
+
+    // Écoles
+    Route::apiResource('ecoles', EcoleController::class);
+
+    // Centres d'examen
+    Route::apiResource('centre-examens', CentreExamenController::class);
+
+    // Centres de dépôt
+    Route::apiResource('centre-depots', CentreDepotController::class);
 
     // Exports CSV/Excel
     Route::get('/export/candidats', [ExportController::class, 'exportCandidats']);

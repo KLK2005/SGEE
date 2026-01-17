@@ -8,96 +8,92 @@ use Illuminate\Http\JsonResponse;
 
 class CentreDepotController extends Controller
 {
+    /**
+     * Liste tous les centres de dépôt
+     */
     public function index(): JsonResponse
     {
-        try {
-            $centres = CentreDepot::all();
-            return response()->json([
-                'success' => true,
-                'data' => $centres
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des centres',
-                'error' => config('app.debug') ? $e->getMessage() : null
-            ], 500);
-        }
+        $centres = CentreDepot::orderBy('nom_centre')->get();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $centres
+        ]);
     }
 
-    public function show($id): JsonResponse
-    {
-        try {
-            $centre = CentreDepot::findOrFail($id);
-            return response()->json([
-                'success' => true,
-                'data' => $centre
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Centre non trouvé'
-            ], 404);
-        }
-    }
-
+    /**
+     * Créer un nouveau centre de dépôt
+     */
     public function store(Request $request): JsonResponse
     {
-        try {
-            $request->validate([
-                'nom' => 'required|string|max:255',
-                'adresse' => 'nullable|string',
-            ]);
+        $validated = $request->validate([
+            'nom_centre' => 'required|string|max:255',
+            'code_centre' => 'required|string|max:50|unique:centre_depots',
+            'adresse' => 'required|string|max:255',
+            'ville' => 'required|string|max:100',
+            'telephone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'horaires' => 'nullable|string|max:255',
+            'services' => 'nullable|string',
+            'actif' => 'boolean',
+        ]);
 
-            $centre = CentreDepot::create($request->all());
-            return response()->json([
-                'success' => true,
-                'message' => 'Centre créé avec succès',
-                'data' => $centre
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la création',
-                'error' => config('app.debug') ? $e->getMessage() : null
-            ], 500);
-        }
+        $centre = CentreDepot::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Centre de dépôt créé avec succès',
+            'data' => $centre
+        ], 201);
     }
 
-    public function update(Request $request, $id): JsonResponse
+    /**
+     * Afficher un centre de dépôt spécifique
+     */
+    public function show(CentreDepot $centreDepot): JsonResponse
     {
-        try {
-            $centre = CentreDepot::findOrFail($id);
-            $centre->update($request->all());
-            return response()->json([
-                'success' => true,
-                'message' => 'Centre mis à jour avec succès',
-                'data' => $centre->fresh()
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la mise à jour',
-                'error' => config('app.debug') ? $e->getMessage() : null
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => $centreDepot
+        ]);
     }
 
-    public function destroy($id): JsonResponse
+    /**
+     * Mettre à jour un centre de dépôt
+     */
+    public function update(Request $request, CentreDepot $centreDepot): JsonResponse
     {
-        try {
-            $centre = CentreDepot::findOrFail($id);
-            $centre->delete();
-            return response()->json([
-                'success' => true,
-                'message' => 'Centre supprimé avec succès'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la suppression',
-                'error' => config('app.debug') ? $e->getMessage() : null
-            ], 500);
-        }
+        $validated = $request->validate([
+            'nom_centre' => 'sometimes|required|string|max:255',
+            'code_centre' => 'sometimes|required|string|max:50|unique:centre_depots,code_centre,' . $centreDepot->id,
+            'adresse' => 'sometimes|required|string|max:255',
+            'ville' => 'sometimes|required|string|max:100',
+            'telephone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'horaires' => 'nullable|string|max:255',
+            'services' => 'nullable|string',
+            'actif' => 'boolean',
+        ]);
+
+        $centreDepot->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Centre de dépôt mis à jour avec succès',
+            'data' => $centreDepot
+        ]);
+    }
+
+    /**
+     * Supprimer un centre de dépôt
+     */
+    public function destroy(CentreDepot $centreDepot): JsonResponse
+    {
+        $centreDepot->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Centre de dépôt supprimé avec succès'
+        ]);
     }
 }

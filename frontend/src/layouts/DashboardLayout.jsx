@@ -6,6 +6,9 @@ import {
   UserGroupIcon,
   AcademicCapIcon,
   BuildingOfficeIcon,
+  BuildingLibraryIcon,
+  BuildingOffice2Icon,
+  MapPinIcon,
   CreditCardIcon,
   ChartBarIcon,
   DocumentTextIcon,
@@ -15,6 +18,9 @@ import {
   XMarkIcon,
   UserIcon,
   ShieldCheckIcon,
+  SquaresPlusIcon,
+  ClipboardDocumentListIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline'
 
 const studentNavItems = [
@@ -29,6 +35,9 @@ const adminNavItems = [
   { name: 'Candidats', href: '/admin/candidats', icon: UserGroupIcon },
   { name: 'Filières', href: '/admin/filieres', icon: AcademicCapIcon },
   { name: 'Départements', href: '/admin/departements', icon: BuildingOfficeIcon },
+  { name: 'Écoles', href: '/admin/ecoles', icon: BuildingLibraryIcon },
+  { name: 'Centres Examen', href: '/admin/centres-examen', icon: ClipboardDocumentListIcon },
+  { name: 'Centres Dépôt', href: '/admin/centres-depot', icon: CheckCircleIcon },
   { name: 'Paiements', href: '/admin/paiements', icon: CreditCardIcon },
   { name: 'Documents', href: '/admin/documents', icon: DocumentTextIcon },
   { name: 'Statistiques', href: '/admin/statistiques', icon: ChartBarIcon },
@@ -51,91 +60,95 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm animate-fadeIn"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 h-full w-80 bg-gradient-to-b from-blue-600 via-blue-700 to-purple-700 shadow-2xl transform transition-all duration-300 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b">
-          <h1 className="text-xl font-bold text-primary-600">SGEE</h1>
+        <div className="flex items-center justify-between h-20 px-6 border-b border-white/20">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+            <span className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-600 font-black text-lg shadow-lg">S</span>
+            <span className="tracking-wide">SGEE</span>
+          </h1>
           <button
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+            className="lg:hidden p-2 rounded-lg hover:bg-white/10 text-white transition-colors"
             onClick={() => setSidebarOpen(false)}
           >
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
 
-        <nav className="p-4 space-y-1">
-          {navItems.map((item) => (
+        <nav className="p-6 space-y-2.5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
+          {navItems.map((item, index) => (
             <NavLink
               key={item.href}
               to={item.href}
               end={item.href === '/admin' || item.href === '/etudiant'}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                `flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-300 group animate-fadeInUp ${
                   isActive
-                    ? 'bg-primary-50 text-primary-700 font-medium'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-white text-blue-700 font-bold shadow-lg'
+                    : 'text-white/90 hover:bg-white/10 hover:text-white font-medium'
                 }`
               }
+              style={{ animationDelay: `${index * 50}ms` }}
               onClick={() => setSidebarOpen(false)}
             >
-              <item.icon className="w-5 h-5" />
-              {item.name}
+              <item.icon className="w-6 h-6 group-hover:scale-110 transition-transform flex-shrink-0" />
+              <span className="text-sm">{item.name}</span>
             </NavLink>
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/20 bg-gradient-to-b from-transparent to-black/20">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="flex items-center gap-3 w-full px-4 py-3.5 text-white hover:bg-red-500 rounded-xl transition-all duration-300 font-semibold group"
           >
-            <ArrowRightOnRectangleIcon className="w-5 h-5" />
-            Déconnexion
+            <ArrowRightOnRectangleIcon className="w-6 h-6 group-hover:scale-110 transition-transform" />
+            <span className="text-sm">Déconnexion</span>
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="lg:pl-80">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white shadow-sm">
-          <div className="flex items-center justify-between h-16 px-4">
+        <header className="sticky top-0 z-30 bg-gradient-to-r from-white/90 via-blue-50/90 to-purple-50/90 backdrop-blur-xl shadow-lg border-b border-gray-200/50">
+          <div className="flex items-center justify-between h-20 px-8">
             <button
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+              className="lg:hidden p-2.5 rounded-xl hover:bg-gray-100 transition-all duration-300 text-gray-700 hover:text-gray-900"
               onClick={() => setSidebarOpen(true)}
             >
               <Bars3Icon className="w-6 h-6" />
             </button>
 
-            <div className="flex items-center gap-4 ml-auto">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">
+            <div className="flex items-center gap-6 ml-auto">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-bold text-gray-900">
                   {user?.nom} {user?.prenom}
                 </p>
-                <p className="text-xs text-gray-500 capitalize">{user?.role?.nom}</p>
+                <p className="text-xs text-gray-500 capitalize font-medium">{user?.role?.nom}</p>
               </div>
-              <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                <UserIcon className="w-5 h-5 text-primary-600" />
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                <UserIcon className="w-6 h-6 text-white" />
               </div>
             </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="p-4 lg:p-6">
+        <main className="p-6 lg:p-8 min-h-[calc(100vh-80px)]">
           <Outlet />
         </main>
       </div>

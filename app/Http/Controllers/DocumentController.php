@@ -6,7 +6,7 @@ use App\Models\Candidat;
 use App\Models\Document;
 use App\Models\Paiement;
 use App\Services\DocumentService;
-use App\Services\FileSecurityService;
+use App\Services\AutoValidationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -15,12 +15,12 @@ use Illuminate\Support\Facades\Validator;
 class DocumentController extends Controller
 {
     protected DocumentService $documentService;
-    protected FileSecurityService $fileSecurityService;
+    protected AutoValidationService $autoValidationService;
 
-    public function __construct(DocumentService $documentService, FileSecurityService $fileSecurityService)
+    public function __construct(DocumentService $documentService, AutoValidationService $autoValidationService)
     {
         $this->documentService = $documentService;
-        $this->fileSecurityService = $fileSecurityService;
+        $this->autoValidationService = $autoValidationService;
     }
 
     /**
@@ -84,49 +84,28 @@ class DocumentController extends Controller
      */
     public function upload(Request $request): JsonResponse
     {
-        $request->validate([
-            'candidat_id' => 'required|exists:candidats,id',
-            'type_document' => 'required|string|in:photo_identite,acte_naissance,diplome,certificat_nationalite,autre',
-            'fichier' => 'required|file|max:5120|mimes:pdf,jpg,jpeg,png'
-        ]);
+        try {
+            $request->validate([
+                'candidat_id' => 'required|exists:candidats,id',
+                'type_document' => 'required|string|in:photo_identite,acte_naissance,diplome,certificat_nationalite,autre',
+                'fichier' => 'required|file|max:5120|mimes:pdf,jpg,jpeg,png'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Données invalides',
+                'errors' => $e->errors()
+            ], 422);
+        }
 
         try {
             $candidat = Candidat::findOrFail($request->candidat_id);
             $file = $request->file('fichier');
 
-            // Validation sécurisée du fichier
-            $validation = $this->fileSecurityService->validateFile(
-                $file,
-                ['application/pdf', 'image/jpeg', 'image/png'],
-                5120
-            );
-
-            if (!$validation['valid']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Fichier invalide',
-                    'errors' => $validation['errors']
-                ], 422);
-            }
-
-            // Scanner le fichier
-            if (!$this->fileSecurityService->scanFile($file)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Fichier suspect détecté'
-                ], 422);
-            }
-
-            // Générer un nom sécurisé
-            $secureFileName = $this->fileSecurityService->generateSecureFileName($file->getClientOriginalName());
+            // Générer un nom sécurisé simple
+            $extension = $file->getClientOriginalExtension();
+            $secureFileName = date('YmdHis') . '_' . uniqid() . '.' . $extension;
             $path = $file->storeAs('documents/' . $candidat->id, $secureFileName, 'public');
-
-            // Nettoyer les métadonnées si c'est une image
-            $fullPath = Storage::disk('public')->path($path);
-            $this->fileSecurityService->stripImageMetadata($fullPath);
-
-            // Générer le hash pour vérification d'intégrité
-            $fileHash = $this->fileSecurityService->generateFileHash($fullPath);
 
             // Vérifier si un document du même type existe déjà
             $existingDoc = Document::where('candidat_id', $candidat->id)
@@ -140,7 +119,6 @@ class DocumentController extends Controller
                 }
                 $existingDoc->update([
                     'fichier' => $path,
-                    'file_hash' => $fileHash,
                     'statut_verification' => 'en_attente',
                     'date_upload' => now()
                 ]);
@@ -150,18 +128,30 @@ class DocumentController extends Controller
                     'candidat_id' => $candidat->id,
                     'type_document' => $request->type_document,
                     'fichier' => $path,
-                    'file_hash' => $fileHash,
                     'statut_verification' => 'en_attente',
                     'date_upload' => now()
                 ]);
             }
 
+            // Validation automatique du document
+            $autoValidated = $this->autoValidationService->autoValidateDocument($document);
+
+            // Vérifier si tous les documents sont validés pour auto-valider l'enrôlement
+            if ($autoValidated) {
+                $this->autoValidationService->autoValidateEnrolement($candidat->id);
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'Document uploadé avec succès',
-                'data' => $document
+                'message' => $autoValidated 
+                    ? 'Document uploadé et validé automatiquement' 
+                    : 'Document uploadé avec succès',
+                'data' => $document->fresh(),
+                'auto_validated' => $autoValidated
             ], 201);
         } catch (\Exception $e) {
+            \Log::error('Upload error: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de l\'upload',
