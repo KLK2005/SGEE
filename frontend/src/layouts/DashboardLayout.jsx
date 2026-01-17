@@ -30,6 +30,7 @@ const adminNavItems = [
   { name: 'Filières', href: '/admin/filieres', icon: AcademicCapIcon },
   { name: 'Départements', href: '/admin/departements', icon: BuildingOfficeIcon },
   { name: 'Paiements', href: '/admin/paiements', icon: CreditCardIcon },
+  { name: 'Documents', href: '/admin/documents', icon: DocumentTextIcon },
   { name: 'Statistiques', href: '/admin/statistiques', icon: ChartBarIcon },
   { name: 'Utilisateurs', href: '/admin/utilisateurs', icon: UserIcon },
   { name: 'Rôles', href: '/admin/roles', icon: ShieldCheckIcon },

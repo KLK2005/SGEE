@@ -156,6 +156,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/documents/upload', [DocumentController::class, 'upload']);
     Route::get('/documents/candidat/{candidatId}', [DocumentController::class, 'getByCandidat']);
     Route::delete('/documents/{id}', [DocumentController::class, 'destroy']);
+    Route::post('/documents/{id}/validate', [DocumentController::class, 'validateDocument']);
+    Route::post('/documents/{id}/reject', [DocumentController::class, 'rejectDocument']);
     Route::get('/documents/download', [DocumentController::class, 'downloadDocument']);
     Route::get('/documents/fiche-enrolement/{candidatId}', [DocumentController::class, 'generateFicheEnrolement']);
     Route::get('/documents/quitus/{paiementId}', [DocumentController::class, 'generateQuitusPaiement']);

@@ -25,6 +25,7 @@ import GestionCandidats from './pages/admin/GestionCandidats'
 import GestionFilieres from './pages/admin/GestionFilieres'
 import GestionDepartements from './pages/admin/GestionDepartements'
 import GestionPaiements from './pages/admin/GestionPaiements'
+import GestionDocuments from './pages/admin/GestionDocuments'
 import Statistiques from './pages/admin/Statistiques'
 import GestionUtilisateurs from './pages/admin/GestionUtilisateurs'
 import GestionRoles from './pages/admin/GestionRoles'
@@ -90,6 +91,7 @@ function App() {
         <Route path="filieres" element={<GestionFilieres />} />
         <Route path="departements" element={<GestionDepartements />} />
         <Route path="paiements" element={<GestionPaiements />} />
+        <Route path="documents" element={<GestionDocuments />} />
         <Route path="statistiques" element={<Statistiques />} />
         <Route path="utilisateurs" element={<GestionUtilisateurs />} />
         <Route path="roles" element={<GestionRoles />} />

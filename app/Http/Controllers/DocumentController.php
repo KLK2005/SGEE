@@ -132,6 +132,79 @@ class DocumentController extends Controller
     }
 
     /**
+     * Valider un document
+     */
+    public function validateDocument($id): JsonResponse
+    {
+        try {
+            $document = Document::with('candidat')->findOrFail($id);
+            $document->update([
+                'statut_verification' => 'valide',
+                'date_verification' => now()
+            ]);
+
+            // Envoyer notification au candidat
+            if ($document->candidat->email) {
+                try {
+                    \Mail::to($document->candidat->email)->send(new \App\Mail\DocumentValidated($document));
+                } catch (\Exception $e) {
+                    \Log::error('Erreur envoi email validation document: ' . $e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document validé avec succès',
+                'data' => $document
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la validation'
+            ], 500);
+        }
+    }
+
+    /**
+     * Rejeter un document
+     */
+    public function rejectDocument(Request $request, $id): JsonResponse
+    {
+        try {
+            $request->validate([
+                'motif_rejet' => 'nullable|string|max:500'
+            ]);
+
+            $document = Document::with('candidat')->findOrFail($id);
+            $document->update([
+                'statut_verification' => 'rejete',
+                'motif_rejet' => $request->motif_rejet,
+                'date_verification' => now()
+            ]);
+
+            // Envoyer notification au candidat
+            if ($document->candidat->email) {
+                try {
+                    \Mail::to($document->candidat->email)->send(new \App\Mail\DocumentRejected($document));
+                } catch (\Exception $e) {
+                    \Log::error('Erreur envoi email rejet document: ' . $e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document rejeté',
+                'data' => $document
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du rejet'
+            ], 500);
+        }
+    }
+
+    /**
      * Générer et télécharger la fiche d'enrôlement
      */
     public function generateFicheEnrolement(Request $request, int $candidatId): JsonResponse
