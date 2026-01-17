@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { candidatService } from '../../services/candidatService'
 import { enrolementService } from '../../services/enrolementService'
 import { filiereService } from '../../services/filiereService'
+import CandidatDetailModal from '../../components/CandidatDetailModal'
 import toast from 'react-hot-toast'
 import {
   MagnifyingGlassIcon,
@@ -10,7 +11,6 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   ArrowDownTrayIcon,
-  DocumentTextIcon,
   TableCellsIcon,
   PencilIcon,
   TrashIcon,
@@ -22,6 +22,7 @@ export default function GestionCandidats() {
   const [statusFilter, setStatusFilter] = useState('')
   const [filiereFilter, setFiliereFilter] = useState('')
   const [selectedCandidat, setSelectedCandidat] = useState(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [editData, setEditData] = useState({})
 
@@ -47,6 +48,7 @@ export default function GestionCandidats() {
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-candidats'])
       toast.success('Enrôlement validé')
+      setShowDetailModal(false)
       setSelectedCandidat(null)
     },
     onError: (error) => toast.error(error.response?.data?.message || 'Erreur'),
@@ -57,6 +59,7 @@ export default function GestionCandidats() {
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-candidats'])
       toast.success('Enrôlement rejeté')
+      setShowDetailModal(false)
       setSelectedCandidat(null)
     },
     onError: (error) => toast.error(error.response?.data?.message || 'Erreur'),
@@ -68,6 +71,7 @@ export default function GestionCandidats() {
       queryClient.invalidateQueries(['admin-candidats'])
       toast.success('Candidat mis à jour')
       setEditMode(false)
+      setShowDetailModal(false)
       setSelectedCandidat(null)
     },
     onError: () => toast.error('Erreur lors de la mise à jour'),
@@ -78,6 +82,7 @@ export default function GestionCandidats() {
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-candidats'])
       toast.success('Candidat supprimé')
+      setShowDetailModal(false)
       setSelectedCandidat(null)
     },
     onError: () => toast.error('Erreur lors de la suppression'),
@@ -132,7 +137,18 @@ export default function GestionCandidats() {
       date_naissance: candidat.date_naissance,
       lieu_naissance: candidat.lieu_naissance,
       nationalite: candidat.nationalite,
+      sexe: candidat.sexe,
       filiere_id: candidat.filiere_id,
+      adresse_complete: candidat.adresse_complete,
+      ville: candidat.ville,
+      quartier: candidat.quartier,
+      pays: candidat.pays,
+      dernier_diplome: candidat.dernier_diplome,
+      etablissement_origine: candidat.etablissement_origine,
+      niveau_etude: candidat.niveau_etude,
+      serie_bac: candidat.serie_bac,
+      mention_bac: candidat.mention_bac,
+      annee_obtention: candidat.annee_obtention,
     })
     setEditMode(true)
   }
@@ -276,32 +292,14 @@ export default function GestionCandidats() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { setSelectedCandidat(candidat); setEditMode(false) }}
-                          className="p-2 hover:bg-gray-100 rounded-lg" title="Voir">
+                        <button onClick={() => { setSelectedCandidat(candidat); setShowDetailModal(true); setEditMode(false) }}
+                          className="p-2 hover:bg-gray-100 rounded-lg" title="Voir détails">
                           <EyeIcon className="w-5 h-5 text-gray-500" />
                         </button>
                         <button onClick={() => openEdit(candidat)}
                           className="p-2 hover:bg-blue-100 rounded-lg" title="Modifier">
                           <PencilIcon className="w-5 h-5 text-blue-600" />
                         </button>
-                        {candidat.enrolement?.statut_enrolement === 'en_attente' && (
-                          <>
-                            <button onClick={() => validateMutation.mutate(candidat.enrolement.id)}
-                              className="p-2 hover:bg-green-100 rounded-lg" title="Valider">
-                              <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                            </button>
-                            <button onClick={() => rejectMutation.mutate(candidat.enrolement.id)}
-                              className="p-2 hover:bg-red-100 rounded-lg" title="Rejeter">
-                              <XCircleIcon className="w-5 h-5 text-red-600" />
-                            </button>
-                          </>
-                        )}
-                        {candidat.enrolement && (
-                          <button onClick={() => handleDownloadFiche(candidat.enrolement.id)}
-                            className="p-2 hover:bg-blue-100 rounded-lg" title="Télécharger fiche">
-                            <ArrowDownTrayIcon className="w-5 h-5 text-blue-600" />
-                          </button>
-                        )}
                         <button onClick={() => {
                           if (confirm('Supprimer ce candidat ?')) deleteMutation.mutate(candidat.id)
                         }} className="p-2 hover:bg-red-100 rounded-lg" title="Supprimer">
@@ -317,140 +315,79 @@ export default function GestionCandidats() {
         </div>
       </div>
 
-      {/* Detail/Edit Modal */}
-      {selectedCandidat && (
+      {/* Detail Modal */}
+      {showDetailModal && selectedCandidat && (
+        <CandidatDetailModal
+          candidat={selectedCandidat}
+          onClose={() => {
+            setShowDetailModal(false)
+            setSelectedCandidat(null)
+          }}
+          onValidate={(enrolementId) => validateMutation.mutate(enrolementId)}
+          onReject={(enrolementId) => rejectMutation.mutate(enrolementId)}
+          onDownloadFiche={handleDownloadFiche}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {editMode && selectedCandidat && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b flex justify-between items-center">
-              <h3 className="text-lg font-semibold">
-                {editMode ? 'Modifier le candidat' : 'Détails du candidat'}
-              </h3>
-              {!editMode && getStatusBadge(selectedCandidat)}
+              <h3 className="text-lg font-semibold">Modifier le candidat</h3>
             </div>
             <div className="p-6 space-y-4">
-              {editMode ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">Nom</label>
-                    <input type="text" className="input-field" value={editData.nom}
-                      onChange={(e) => setEditData({...editData, nom: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="label">Prénom</label>
-                    <input type="text" className="input-field" value={editData.prenom}
-                      onChange={(e) => setEditData({...editData, prenom: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="label">Téléphone</label>
-                    <input type="text" className="input-field" value={editData.telephone || ''}
-                      onChange={(e) => setEditData({...editData, telephone: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="label">Email</label>
-                    <input type="email" className="input-field" value={editData.email || ''}
-                      onChange={(e) => setEditData({...editData, email: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="label">Date de naissance</label>
-                    <input type="date" className="input-field" value={editData.date_naissance || ''}
-                      onChange={(e) => setEditData({...editData, date_naissance: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="label">Lieu de naissance</label>
-                    <input type="text" className="input-field" value={editData.lieu_naissance || ''}
-                      onChange={(e) => setEditData({...editData, lieu_naissance: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="label">Nationalité</label>
-                    <input type="text" className="input-field" value={editData.nationalite || ''}
-                      onChange={(e) => setEditData({...editData, nationalite: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="label">Filière</label>
-                    <select className="input-field" value={editData.filiere_id || ''}
-                      onChange={(e) => setEditData({...editData, filiere_id: e.target.value})}>
-                      <option value="">Sélectionner</option>
-                      {filieres.map(f => <option key={f.id} value={f.id}>{f.nom_filiere}</option>)}
-                    </select>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Nom</label>
+                  <input type="text" className="input-field" value={editData.nom}
+                    onChange={(e) => setEditData({...editData, nom: e.target.value})} />
                 </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><p className="text-sm text-gray-500">Nom complet</p>
-                      <p className="font-medium">{selectedCandidat.nom} {selectedCandidat.prenom}</p></div>
-                    <div><p className="text-sm text-gray-500">N° Dossier</p>
-                      <p className="font-medium">{selectedCandidat.numero_dossier || '-'}</p></div>
-                    <div><p className="text-sm text-gray-500">Date de naissance</p>
-                      <p className="font-medium">{selectedCandidat.date_naissance || '-'}</p></div>
-                    <div><p className="text-sm text-gray-500">Lieu de naissance</p>
-                      <p className="font-medium">{selectedCandidat.lieu_naissance || '-'}</p></div>
-                    <div><p className="text-sm text-gray-500">Téléphone</p>
-                      <p className="font-medium">{selectedCandidat.telephone || '-'}</p></div>
-                    <div><p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{selectedCandidat.email || '-'}</p></div>
-                    <div><p className="text-sm text-gray-500">Filière</p>
-                      <p className="font-medium">{selectedCandidat.filiere?.nom_filiere || '-'}</p></div>
-                    <div><p className="text-sm text-gray-500">Nationalité</p>
-                      <p className="font-medium">{selectedCandidat.nationalite || '-'}</p></div>
-                  </div>
-                  {selectedCandidat.documents?.length > 0 && (
-                    <div className="pt-4 border-t">
-                      <h4 className="font-medium mb-3">Documents téléversés</h4>
-                      <div className="space-y-2">
-                        {selectedCandidat.documents.map((doc) => (
-                          <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                            <div className="flex items-center gap-2">
-                              <DocumentTextIcon className="w-5 h-5 text-gray-400" />
-                              <span className="text-sm">{doc.type_document}</span>
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded ${
-                              doc.statut_verification === 'valide' ? 'bg-green-100 text-green-700' :
-                              doc.statut_verification === 'rejete' ? 'bg-red-100 text-red-700' :
-                              'bg-yellow-100 text-yellow-700'
-                            }`}>{doc.statut_verification}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {selectedCandidat.enrolement?.statut_enrolement === 'en_attente' && (
-                    <div className="pt-4 border-t flex gap-3">
-                      <button onClick={() => validateMutation.mutate(selectedCandidat.enrolement.id)}
-                        className="btn-primary flex items-center gap-2">
-                        <CheckCircleIcon className="w-5 h-5" /> Valider
-                      </button>
-                      <button onClick={() => rejectMutation.mutate(selectedCandidat.enrolement.id)}
-                        className="btn-secondary text-red-600 flex items-center gap-2">
-                        <XCircleIcon className="w-5 h-5" /> Rejeter
-                      </button>
-                    </div>
-                  )}
-                  {selectedCandidat.enrolement && (
-                    <div className="pt-4 border-t">
-                      <button onClick={() => handleDownloadFiche(selectedCandidat.enrolement.id)}
-                        className="btn-secondary flex items-center gap-2">
-                        <ArrowDownTrayIcon className="w-4 h-4" /> Télécharger la fiche
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
+                <div>
+                  <label className="label">Prénom</label>
+                  <input type="text" className="input-field" value={editData.prenom}
+                    onChange={(e) => setEditData({...editData, prenom: e.target.value})} />
+                </div>
+                <div>
+                  <label className="label">Téléphone</label>
+                  <input type="text" className="input-field" value={editData.telephone || ''}
+                    onChange={(e) => setEditData({...editData, telephone: e.target.value})} />
+                </div>
+                <div>
+                  <label className="label">Email</label>
+                  <input type="email" className="input-field" value={editData.email || ''}
+                    onChange={(e) => setEditData({...editData, email: e.target.value})} />
+                </div>
+                <div>
+                  <label className="label">Date de naissance</label>
+                  <input type="date" className="input-field" value={editData.date_naissance || ''}
+                    onChange={(e) => setEditData({...editData, date_naissance: e.target.value})} />
+                </div>
+                <div>
+                  <label className="label">Lieu de naissance</label>
+                  <input type="text" className="input-field" value={editData.lieu_naissance || ''}
+                    onChange={(e) => setEditData({...editData, lieu_naissance: e.target.value})} />
+                </div>
+                <div>
+                  <label className="label">Nationalité</label>
+                  <input type="text" className="input-field" value={editData.nationalite || ''}
+                    onChange={(e) => setEditData({...editData, nationalite: e.target.value})} />
+                </div>
+                <div>
+                  <label className="label">Filière</label>
+                  <select className="input-field" value={editData.filiere_id || ''}
+                    onChange={(e) => setEditData({...editData, filiere_id: e.target.value})}>
+                    <option value="">Sélectionner</option>
+                    {filieres.map(f => <option key={f.id} value={f.id}>{f.nom_filiere}</option>)}
+                  </select>
+                </div>
+              </div>
             </div>
             <div className="p-6 border-t flex justify-end gap-3">
-              {editMode ? (
-                <>
-                  <button onClick={() => { setEditMode(false); setSelectedCandidat(null) }} className="btn-secondary">Annuler</button>
-                  <button onClick={handleUpdate} className="btn-primary" disabled={updateMutation.isPending}>
-                    {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => openEdit(selectedCandidat)} className="btn-secondary">Modifier</button>
-                  <button onClick={() => setSelectedCandidat(null)} className="btn-primary">Fermer</button>
-                </>
-              )}
+              <button onClick={() => { setEditMode(false); setSelectedCandidat(null) }} className="btn-secondary">Annuler</button>
+              <button onClick={handleUpdate} className="btn-primary" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
             </div>
           </div>
         </div>
