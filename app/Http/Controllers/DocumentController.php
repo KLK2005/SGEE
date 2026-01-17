@@ -24,6 +24,62 @@ class DocumentController extends Controller
     }
 
     /**
+     * Liste de tous les documents avec leurs candidats
+     */
+    public function index(Request $request): JsonResponse
+    {
+        try {
+            $query = Document::with(['candidat', 'candidat.filiere']);
+
+            // Filtres optionnels
+            if ($request->has('statut_verification')) {
+                $query->where('statut_verification', $request->statut_verification);
+            }
+            if ($request->has('type_document')) {
+                $query->where('type_document', $request->type_document);
+            }
+
+            $documents = $query->orderBy('date_upload', 'desc')->get();
+
+            // Ajouter l'URL complète pour chaque document
+            $documents = $documents->map(function($doc) {
+                return [
+                    'id' => $doc->id,
+                    'candidat_id' => $doc->candidat_id,
+                    'type_document' => $doc->type_document,
+                    'fichier' => $doc->fichier,
+                    'url' => Storage::disk('public')->url($doc->fichier),
+                    'file_hash' => $doc->file_hash,
+                    'statut_verification' => $doc->statut_verification,
+                    'date_upload' => $doc->date_upload,
+                    'candidat' => $doc->candidat ? [
+                        'id' => $doc->candidat->id,
+                        'nom' => $doc->candidat->nom,
+                        'prenom' => $doc->candidat->prenom,
+                        'numero_dossier' => $doc->candidat->numero_dossier,
+                        'email' => $doc->candidat->email,
+                        'filiere' => $doc->candidat->filiere ? [
+                            'id' => $doc->candidat->filiere->id,
+                            'nom_filiere' => $doc->candidat->filiere->nom_filiere,
+                        ] : null,
+                    ] : null,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $documents
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des documents',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    /**
      * Upload un document pour un candidat
      */
     public function upload(Request $request): JsonResponse

@@ -153,6 +153,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Documents
+    Route::get('/documents', [DocumentController::class, 'index']); // Tous les documents
     Route::post('/documents/upload', [DocumentController::class, 'upload']);
     Route::get('/documents/candidat/{candidatId}', [DocumentController::class, 'getByCandidat']);
     Route::delete('/documents/{id}', [DocumentController::class, 'destroy']);

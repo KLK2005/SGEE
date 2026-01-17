@@ -20,27 +20,16 @@ export default function GestionDocuments() {
   const { data: documentsData, isLoading } = useQuery({
     queryKey: ['admin-documents', statusFilter, typeFilter],
     queryFn: async () => {
-      const response = await api.get('/candidats', { 
-        params: { per_page: 100 } 
-      })
-      const candidats = response.data.data
-      const allDocs = []
-      candidats.forEach(c => {
-        if (c.documents) {
-          c.documents.forEach(doc => {
-            allDocs.push({ ...doc, candidat: c })
-          })
-        }
-      })
-      return allDocs
+      const params = {}
+      if (statusFilter) params.statut_verification = statusFilter
+      if (typeFilter) params.type_document = typeFilter
+      
+      const response = await api.get('/documents', { params })
+      return response.data.data
     },
   })
 
-  const documents = (documentsData || []).filter(doc => {
-    if (statusFilter && doc.statut_verification !== statusFilter) return false
-    if (typeFilter && doc.type_document !== typeFilter) return false
-    return true
-  })
+  const documents = documentsData || []
 
   const validateMutation = useMutation({
     mutationFn: (id) => api.post(`/documents/${id}/validate`),
