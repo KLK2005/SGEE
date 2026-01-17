@@ -29,13 +29,22 @@ export default function GestionCandidats() {
   const { data: candidatsData, isLoading, error } = useQuery({
     queryKey: ['admin-candidats', search, statusFilter, filiereFilter],
     queryFn: async () => {
-      console.log('🔍 Fetching candidats with params:', { search, statut_candidat: statusFilter, filiere_id: filiereFilter })
-      const result = await candidatService.getAll({ 
-        search, 
-        statut_candidat: statusFilter,
-        filiere_id: filiereFilter 
-      })
+      // Ne pas envoyer les paramètres vides
+      const params = {}
+      if (search) params.search = search
+      if (statusFilter) params.statut_candidat = statusFilter
+      if (filiereFilter) params.filiere_id = filiereFilter
+      
+      console.log('🔍 Fetching candidats with params:', params)
+      const result = await candidatService.getAll(params)
       console.log('✅ Candidats received:', result)
+      console.log('📦 Result structure:', {
+        success: result?.success,
+        hasData: !!result?.data,
+        dataType: Array.isArray(result?.data) ? 'array' : typeof result?.data,
+        dataLength: result?.data?.length,
+        dataKeys: result?.data ? Object.keys(result.data).slice(0, 5) : []
+      })
       return result
     },
     onError: (err) => {
@@ -53,6 +62,7 @@ export default function GestionCandidats() {
   const filieres = filieresData?.data || []
 
   console.log('📊 Candidats count:', candidats.length)
+  console.log('📋 Candidats array:', candidats)
 
   const validateMutation = useMutation({
     mutationFn: (enrolementId) => enrolementService.validate(enrolementId),

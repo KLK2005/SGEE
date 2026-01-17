@@ -22,16 +22,16 @@ class CandidatController extends Controller
             $query = Candidat::with(['filiere', 'filiere.departement', 'enrolement', 'enrolement.session', 'documents', 'paiements']);
 
             // Filtres
-            if ($request->has('utilisateur_id')) {
+            if ($request->has('utilisateur_id') && $request->utilisateur_id) {
                 $query->where('utilisateur_id', $request->utilisateur_id);
             }
-            if ($request->has('filiere_id')) {
+            if ($request->has('filiere_id') && $request->filiere_id) {
                 $query->where('filiere_id', $request->filiere_id);
             }
-            if ($request->has('statut_candidat')) {
+            if ($request->has('statut_candidat') && $request->statut_candidat) {
                 $query->where('statut_candidat', $request->statut_candidat);
             }
-            if ($request->has('search')) {
+            if ($request->has('search') && $request->search) {
                 $search = $request->search;
                 $query->where(function($q) use ($search) {
                     $q->where('nom', 'like', "%{$search}%")
