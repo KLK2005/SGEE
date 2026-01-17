@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tantml:invoke>
-<parameter name="name">fsWritet { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ecoleService } from '../../services/ecoleService';
 import toast from 'react-hot-toast';
