@@ -6,6 +6,7 @@ use App\Models\Candidat;
 use App\Models\Document;
 use App\Models\Paiement;
 use App\Services\DocumentService;
+use App\Services\FileSecurityService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -14,10 +15,12 @@ use Illuminate\Support\Facades\Validator;
 class DocumentController extends Controller
 {
     protected DocumentService $documentService;
+    protected FileSecurityService $fileSecurityService;
 
-    public function __construct(DocumentService $documentService)
+    public function __construct(DocumentService $documentService, FileSecurityService $fileSecurityService)
     {
         $this->documentService = $documentService;
+        $this->fileSecurityService = $fileSecurityService;
     }
 
     /**
@@ -34,7 +37,40 @@ class DocumentController extends Controller
         try {
             $candidat = Candidat::findOrFail($request->candidat_id);
             $file = $request->file('fichier');
-            $path = $file->store('documents/' . $candidat->id, 'public');
+
+            // Validation sécurisée du fichier
+            $validation = $this->fileSecurityService->validateFile(
+                $file,
+                ['application/pdf', 'image/jpeg', 'image/png'],
+                5120
+            );
+
+            if (!$validation['valid']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Fichier invalide',
+                    'errors' => $validation['errors']
+                ], 422);
+            }
+
+            // Scanner le fichier
+            if (!$this->fileSecurityService->scanFile($file)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Fichier suspect détecté'
+                ], 422);
+            }
+
+            // Générer un nom sécurisé
+            $secureFileName = $this->fileSecurityService->generateSecureFileName($file->getClientOriginalName());
+            $path = $file->storeAs('documents/' . $candidat->id, $secureFileName, 'public');
+
+            // Nettoyer les métadonnées si c'est une image
+            $fullPath = Storage::disk('public')->path($path);
+            $this->fileSecurityService->stripImageMetadata($fullPath);
+
+            // Générer le hash pour vérification d'intégrité
+            $fileHash = $this->fileSecurityService->generateFileHash($fullPath);
 
             // Vérifier si un document du même type existe déjà
             $existingDoc = Document::where('candidat_id', $candidat->id)
@@ -48,6 +84,7 @@ class DocumentController extends Controller
                 }
                 $existingDoc->update([
                     'fichier' => $path,
+                    'file_hash' => $fileHash,
                     'statut_verification' => 'en_attente',
                     'date_upload' => now()
                 ]);
@@ -57,6 +94,7 @@ class DocumentController extends Controller
                     'candidat_id' => $candidat->id,
                     'type_document' => $request->type_document,
                     'fichier' => $path,
+                    'file_hash' => $fileHash,
                     'statut_verification' => 'en_attente',
                     'date_upload' => now()
                 ]);

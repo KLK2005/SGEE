@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
+import Chatbot from './components/Chatbot'
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout'
@@ -51,67 +52,72 @@ function App() {
   const userRole = user?.role?.nom_role || user?.role?.nom
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<Home />} />
-      <Route path="/verify" element={<VerifyQrCode />} />
+    <>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Home />} />
+        <Route path="/verify" element={<VerifyQrCode />} />
 
-      {/* Auth Routes */}
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Route>
+        {/* Auth Routes */}
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Route>
 
-      {/* Student Routes */}
-      <Route
-        path="/etudiant"
-        element={
-          <ProtectedRoute allowedRoles={['etudiant']}>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<StudentDashboard />} />
-        <Route path="enrolement" element={<Enrolement />} />
-        <Route path="paiements" element={<MesPaiements />} />
-        <Route path="documents" element={<MesDocuments />} />
-      </Route>
+        {/* Student Routes */}
+        <Route
+          path="/etudiant"
+          element={
+            <ProtectedRoute allowedRoles={['etudiant']}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<StudentDashboard />} />
+          <Route path="enrolement" element={<Enrolement />} />
+          <Route path="paiements" element={<MesPaiements />} />
+          <Route path="documents" element={<MesDocuments />} />
+        </Route>
 
-      {/* Admin Routes */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<AdminDashboard />} />
-        <Route path="candidats" element={<GestionCandidats />} />
-        <Route path="filieres" element={<GestionFilieres />} />
-        <Route path="departements" element={<GestionDepartements />} />
-        <Route path="paiements" element={<GestionPaiements />} />
-        <Route path="documents" element={<GestionDocuments />} />
-        <Route path="statistiques" element={<Statistiques />} />
-        <Route path="utilisateurs" element={<GestionUtilisateurs />} />
-        <Route path="roles" element={<GestionRoles />} />
-      </Route>
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="candidats" element={<GestionCandidats />} />
+          <Route path="filieres" element={<GestionFilieres />} />
+          <Route path="departements" element={<GestionDepartements />} />
+          <Route path="paiements" element={<GestionPaiements />} />
+          <Route path="documents" element={<GestionDocuments />} />
+          <Route path="statistiques" element={<Statistiques />} />
+          <Route path="utilisateurs" element={<GestionUtilisateurs />} />
+          <Route path="roles" element={<GestionRoles />} />
+        </Route>
 
-      {/* Dashboard redirect for authenticated users */}
-      <Route
-        path="/dashboard"
-        element={
-          isAuthenticated ? (
-            <Navigate to={userRole === 'admin' ? '/admin' : '/etudiant'} replace />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
-      
-      {/* 404 */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Dashboard redirect for authenticated users */}
+        <Route
+          path="/dashboard"
+          element={
+            isAuthenticated ? (
+              <Navigate to={userRole === 'admin' ? '/admin' : '/etudiant'} replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        
+        {/* 404 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      {/* Chatbot disponible partout */}
+      <Chatbot />
+    </>
   )
 }
 
