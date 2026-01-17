@@ -237,10 +237,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('ecoles', EcoleController::class);
 
     // Centres d'examen
-    Route::apiResource('centre-examens', CentreExamenController::class);
+    Route::apiResource('centres-examen', CentreExamenController::class);
 
     // Centres de dépôt
-    Route::apiResource('centre-depots', CentreDepotController::class);
+    Route::apiResource('centres-depot', CentreDepotController::class);
 
     // Exports CSV/Excel
     Route::get('/export/candidats', [ExportController::class, 'exportCandidats']);
@@ -249,10 +249,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Sessions académiques
     Route::apiResource('sessions-academiques', SessionAcademiqueController::class);
-
-    // Centres
-    Route::apiResource('centre-depot', CentreDepotController::class);
-    Route::apiResource('centre-exam', CentreExamController::class);
 
     // Concours
     Route::apiResource('concours', ConcoursController::class);
