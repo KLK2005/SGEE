@@ -15,6 +15,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().token
+    console.log('🔑 Token présent:', !!token)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -22,6 +23,7 @@ api.interceptors.request.use(
     if (config.responseType === 'blob') {
       delete config.headers['Accept']
     }
+    console.log('📤 Request:', config.method?.toUpperCase(), config.url)
     return config
   },
   (error) => Promise.reject(error)
@@ -29,13 +31,18 @@ api.interceptors.request.use(
 
 // Response interceptor - handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('📥 Response:', response.config.url, '- Status:', response.status)
+    return response
+  },
   (error) => {
+    console.error('❌ API Error:', error.config?.url, error.response?.status, error.response?.data)
     // Don't redirect for blob requests that fail
     if (error.config?.responseType === 'blob') {
       return Promise.reject(error)
     }
     if (error.response?.status === 401) {
+      console.warn('⚠️ 401 Unauthorized - Logging out')
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }

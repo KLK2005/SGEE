@@ -26,13 +26,22 @@ export default function GestionCandidats() {
   const [editMode, setEditMode] = useState(false)
   const [editData, setEditData] = useState({})
 
-  const { data: candidatsData, isLoading } = useQuery({
+  const { data: candidatsData, isLoading, error } = useQuery({
     queryKey: ['admin-candidats', search, statusFilter, filiereFilter],
-    queryFn: () => candidatService.getAll({ 
-      search, 
-      statut_candidat: statusFilter,
-      filiere_id: filiereFilter 
-    }),
+    queryFn: async () => {
+      console.log('🔍 Fetching candidats with params:', { search, statut_candidat: statusFilter, filiere_id: filiereFilter })
+      const result = await candidatService.getAll({ 
+        search, 
+        statut_candidat: statusFilter,
+        filiere_id: filiereFilter 
+      })
+      console.log('✅ Candidats received:', result)
+      return result
+    },
+    onError: (err) => {
+      console.error('❌ Error fetching candidats:', err)
+      toast.error('Erreur lors du chargement des candidats')
+    }
   })
 
   const { data: filieresData } = useQuery({
@@ -42,6 +51,8 @@ export default function GestionCandidats() {
 
   const candidats = candidatsData?.data || []
   const filieres = filieresData?.data || []
+
+  console.log('📊 Candidats count:', candidats.length)
 
   const validateMutation = useMutation({
     mutationFn: (enrolementId) => enrolementService.validate(enrolementId),
