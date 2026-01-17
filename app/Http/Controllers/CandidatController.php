@@ -19,7 +19,7 @@ class CandidatController extends Controller
     {
         try {
             $perPage = $request->input('per_page', 20);
-            $query = Candidat::with(['filiere', 'filiere.departement', 'enrolement', 'documents']);
+            $query = Candidat::with(['filiere', 'filiere.departement', 'enrolement', 'enrolement.session', 'documents', 'paiements']);
 
             // Filtres
             if ($request->has('utilisateur_id')) {
@@ -71,7 +71,8 @@ class CandidatController extends Controller
             $candidat = Candidat::with([
                 'filiere', 
                 'filiere.departement', 
-                'enrolement', 
+                'enrolement',
+                'enrolement.session',
                 'paiements',
                 'documents'
             ])->findOrFail($id);
