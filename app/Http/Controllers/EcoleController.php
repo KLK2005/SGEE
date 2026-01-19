@@ -15,6 +15,14 @@ class EcoleController extends Controller
     {
         $ecoles = Ecole::orderBy('nom_ecole')->get();
         
+        // Ajouter l'URL complète pour les logos
+        $ecoles = $ecoles->map(function ($ecole) {
+            if ($ecole->logo_path) {
+                $ecole->logo_url = url($ecole->logo_path);
+            }
+            return $ecole;
+        });
+        
         return response()->json([
             'success' => true,
             'data' => $ecoles

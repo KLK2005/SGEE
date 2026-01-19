@@ -214,12 +214,15 @@ export default function GestionEcoles() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {ecoles.map((ecole) => (
           <div key={ecole.id} className="card hover:shadow-lg transition-shadow">
-            {ecole.logo_path && (
+            {ecole.logo_url && (
               <div className="mb-4 flex justify-center">
                 <img
-                  src={ecole.logo_path}
+                  src={ecole.logo_url}
                   alt={ecole.nom_ecole}
                   className="w-24 h-24 object-contain"
+                  onError={(e) => {
+                    e.target.style.display = 'none'
+                  }}
                 />
               </div>
             )}
