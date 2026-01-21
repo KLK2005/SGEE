@@ -34,6 +34,7 @@ const studentNavItems = [
 const adminNavItems = [
   { name: 'Tableau de bord', href: '/admin', icon: HomeIcon },
   { name: 'Candidats', href: '/admin/candidats', icon: UserGroupIcon },
+  { name: 'Enrôlements', href: '/admin/enrolements', icon: ClipboardDocumentListIcon },
   { name: 'Filières', href: '/admin/filieres', icon: AcademicCapIcon },
   { name: 'Départements', href: '/admin/departements', icon: BuildingOfficeIcon },
   { name: 'Écoles', href: '/admin/ecoles', icon: BuildingLibraryIcon },

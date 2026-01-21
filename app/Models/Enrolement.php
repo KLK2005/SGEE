@@ -18,6 +18,10 @@ class Enrolement extends Model
         'session_id',
         'centre_depot_id',
         'utilisateur_id',
+        'departement_id',
+        'filiere_id',
+        'ecole_id',
+        'niveau',
         'date_enrolement',
         'statut_enrolement',
         'fiche_pdf_path'
@@ -58,4 +62,21 @@ class Enrolement extends Model
     {
         return $this->hasOne(Paiement::class);
     }
-}
+
+    // Relation avec l'école
+    public function ecole()
+    {
+        return $this->belongsTo(Ecole::class);
+    }
+
+    // Relation avec le département
+    public function departement()
+    {
+        return $this->belongsTo(Departement::class);
+    }
+
+    // Relation avec la filière
+    public function filiere()
+    {
+        return $this->belongsTo(Filiere::class);
+    }

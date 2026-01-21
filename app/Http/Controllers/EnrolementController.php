@@ -105,21 +105,26 @@ class EnrolementController extends Controller
     {
         $request->validate([
             'candidat_id' => 'required|exists:candidats,id',
+            'filiere_id' => 'required|exists:filieres,id',
+            'departement_id' => 'required|exists:departements,id',
+            'ecole_id' => 'required|exists:ecoles,id',
+            'niveau' => 'required|string',
         ]);
 
         DB::beginTransaction();
         try {
             $candidat = Candidat::findOrFail($request->candidat_id);
+            $filiere = Filiere::findOrFail($request->filiere_id);
 
             // Récupérer la session active ou la première disponible
             $session = SessionAcademique::where('statut', 'active')
                 ->orWhere('statut', 'ouverte')
                 ->first() ?? SessionAcademique::first();
             
-            // Récupérer un concours disponible ou null
-            $concours = Concours::where('statut', 'ouvert')
-                ->orWhere('statut', 'actif')
-                ->first() ?? Concours::first();
+            // Récupérer un concours disponible pour cette filière
+            $concours = Concours::where('filiere_id', $request->filiere_id)
+                ->where('statut', 'actif')
+                ->first() ?? Concours::where('filiere_id', $request->filiere_id)->first();
             
             // Récupérer un centre de dépôt ou null
             $centreDepot = CentreDepot::first();
@@ -133,6 +138,11 @@ class EnrolementController extends Controller
                     'message' => 'Ce candidat est déjà enrôlé'
                 ], 422);
             }
+
+            // Mettre à jour le candidat avec la filière
+            $candidat->update([
+                'filiere_id' => $request->filiere_id,
+            ]);
 
             // Gérer l'upload des documents
             $documentTypes = ['photo_identite', 'acte_naissance', 'diplome', 'certificat_nationalite'];
@@ -151,9 +161,13 @@ class EnrolementController extends Controller
                 }
             }
 
-            // Créer l'enrôlement
+            // Créer l'enrôlement avec tous les détails
             $enrolement = Enrolement::create([
                 'candidat_id' => $request->candidat_id,
+                'filiere_id' => $request->filiere_id,
+                'departement_id' => $request->departement_id,
+                'ecole_id' => $request->ecole_id,
+                'niveau' => $request->niveau,
                 'concours_id' => $concours?->id,
                 'session_id' => $session?->id,
                 'centre_depot_id' => $centreDepot?->id,
@@ -178,6 +192,26 @@ class EnrolementController extends Controller
                 try {
                     Mail::to($candidat->email)->send(new EnrolementMail($enrolement));
                 } catch (\Exception $e) {
+                    \Log::error('Erreur envoi email: ' . $e->getMessage());
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Enrôlement créé avec succès',
+                'data' => $enrolement->load(['candidat.filiere', 'candidat.documents', 'session', 'concours', 'departement', 'ecole'])
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la création de l\'enrôlement',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
                     \Log::error('Erreur envoi email: ' . $e->getMessage());
                 }
             }

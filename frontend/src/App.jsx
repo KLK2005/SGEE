@@ -25,6 +25,7 @@ import MesDocuments from './pages/student/MesDocuments'
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard'
 import GestionCandidats from './pages/admin/GestionCandidats'
+import GestionEnrolements from './pages/admin/GestionEnrolements'
 import GestionFilieres from './pages/admin/GestionFilieres'
 import GestionDepartements from './pages/admin/GestionDepartements'
 import GestionEcoles from './pages/admin/GestionEcoles'
@@ -99,6 +100,7 @@ function App() {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="candidats" element={<GestionCandidats />} />
+          <Route path="enrolements" element={<GestionEnrolements />} />
           <Route path="filieres" element={<GestionFilieres />} />
           <Route path="departements" element={<GestionDepartements />} />
           <Route path="ecoles" element={<GestionEcoles />} />
