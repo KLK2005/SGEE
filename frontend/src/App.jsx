@@ -18,6 +18,7 @@ import VerifyQrCode from './pages/public/VerifyQrCode'
 // Student Pages
 import StudentDashboard from './pages/student/Dashboard'
 import Enrolement from './pages/student/Enrolement'
+import DossierValide from './pages/student/DossierValide'
 import MesPaiements from './pages/student/MesPaiements'
 import MesDocuments from './pages/student/MesDocuments'
 
@@ -82,6 +83,7 @@ function App() {
         >
           <Route index element={<StudentDashboard />} />
           <Route path="enrolement" element={<Enrolement />} />
+          <Route path="dossier-valide" element={<DossierValide />} />
           <Route path="paiements" element={<MesPaiements />} />
           <Route path="documents" element={<MesDocuments />} />
         </Route>

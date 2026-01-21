@@ -10,6 +10,7 @@ use App\Models\SessionAcademique;
 use App\Models\Concours;
 use App\Models\CentreDepot;
 use App\Services\PdfService;
+use App\Services\DossierValidePdfService;
 use App\Mail\EnrolementMail;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -20,10 +21,12 @@ use Illuminate\Support\Facades\Storage;
 class EnrolementController extends Controller
 {
     protected PdfService $pdfService;
+    protected DossierValidePdfService $dossierValidePdfService;
 
-    public function __construct(PdfService $pdfService)
+    public function __construct(PdfService $pdfService, DossierValidePdfService $dossierValidePdfService)
     {
         $this->pdfService = $pdfService;
+        $this->dossierValidePdfService = $dossierValidePdfService;
     }
 
     /**
@@ -267,8 +270,14 @@ class EnrolementController extends Controller
     public function downloadFiche($id)
     {
         try {
-            $enrolement = Enrolement::findOrFail($id);
+            $enrolement = Enrolement::with(['candidat.filiere.ecole', 'candidat.filiere.departement'])->findOrFail($id);
 
+            // Si l'enrôlement est validé, utiliser le nouveau service
+            if ($enrolement->statut_enrolement === 'valide') {
+                return $this->dossierValidePdfService->downloadDossierValide($enrolement);
+            }
+
+            // Sinon, utiliser l'ancien service
             if (!$enrolement->fiche_pdf_path || !Storage::disk('public')->exists($enrolement->fiche_pdf_path)) {
                 // Régénérer le PDF si nécessaire
                 $this->pdfService->generateEnrolementFiche($enrolement);

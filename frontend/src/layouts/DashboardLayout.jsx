@@ -26,6 +26,7 @@ import {
 const studentNavItems = [
   { name: 'Tableau de bord', href: '/etudiant', icon: HomeIcon },
   { name: 'Mon Enrôlement', href: '/etudiant/enrolement', icon: AcademicCapIcon },
+  { name: 'Mon Dossier Validé', href: '/etudiant/dossier-valide', icon: CheckCircleIcon },
   { name: 'Mes Paiements', href: '/etudiant/paiements', icon: CreditCardIcon },
   { name: 'Mes Documents', href: '/etudiant/documents', icon: DocumentTextIcon },
 ]
