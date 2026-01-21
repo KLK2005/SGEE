@@ -11,7 +11,7 @@ class ConcoursController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $concours = Concours::with(['filiere', 'session', 'centreExam'])->get();
+            $concours = Concours::with(['ecole', 'filiere', 'session', 'centreExam'])->get();
             return response()->json([
                 'success' => true,
                 'data' => $concours
@@ -28,7 +28,7 @@ class ConcoursController extends Controller
     public function show($id): JsonResponse
     {
         try {
-            $concours = Concours::with(['filiere', 'session', 'centreExam', 'candidats'])->findOrFail($id);
+            $concours = Concours::with(['ecole', 'filiere', 'session', 'centreExam', 'candidats'])->findOrFail($id);
             return response()->json([
                 'success' => true,
                 'data' => $concours

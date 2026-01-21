@@ -19,7 +19,7 @@ class DepartementController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $departements = Departement::with(['filieres' => function($q) {
+            $departements = Departement::with(['ecole', 'filieres' => function($q) {
                 $q->withCount('candidats');
             }])->get();
             return response()->json([
@@ -38,7 +38,7 @@ class DepartementController extends Controller
     public function show($id): JsonResponse
     {
         try {
-            $departement = Departement::with('filieres.candidats')->findOrFail($id);
+            $departement = Departement::with(['ecole', 'filieres.candidats'])->findOrFail($id);
             return response()->json([
                 'success' => true,
                 'data' => $departement

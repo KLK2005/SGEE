@@ -13,7 +13,9 @@ class EcoleController extends Controller
      */
     public function index(): JsonResponse
     {
-        $ecoles = Ecole::orderBy('nom_ecole')->get();
+        $ecoles = Ecole::with(['departements', 'filieres', 'concours'])
+            ->orderBy('nom_ecole')
+            ->get();
         
         // Ajouter l'URL complète pour les logos
         $ecoles = $ecoles->map(function ($ecole) {
@@ -60,6 +62,12 @@ class EcoleController extends Controller
      */
     public function show(Ecole $ecole): JsonResponse
     {
+        $ecole->load(['departements', 'filieres', 'concours']);
+        
+        if ($ecole->logo_path) {
+            $ecole->logo_url = url($ecole->logo_path);
+        }
+        
         return response()->json([
             'success' => true,
             'data' => $ecole

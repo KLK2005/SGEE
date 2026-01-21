@@ -12,6 +12,7 @@ use App\Models\Enrolement;
 class Concours extends Model
 {
     protected $fillable = [
+        'ecole_id',
         'filiere_id',
         'session_id',
         'centre_exam_id',
@@ -25,31 +26,49 @@ class Concours extends Model
         'statut'
     ];
 
-    // Relation avec la filière
+    /**
+     * Relation avec l'école
+     */
+    public function ecole()
+    {
+        return $this->belongsTo(Ecole::class);
+    }
+
+    /**
+     * Relation avec la filière
+     */
     public function filiere()
     {
         return $this->belongsTo(Filiere::class);
     }
 
-    // Relation avec la session académique
+    /**
+     * Relation avec la session académique
+     */
     public function session()
     {
         return $this->belongsTo(SessionAcademique::class);
     }
 
-    // Relation avec le centre d'examen
+    /**
+     * Relation avec le centre d'examen
+     */
     public function centreExam()
     {
         return $this->belongsTo(CentreExam::class);
     }
 
-    // Relation avec les candidats inscrits au concours
+    /**
+     * Relation avec les candidats inscrits au concours
+     */
     public function candidats()
     {
         return $this->hasMany(Candidat::class);
     }
 
-    // Relation avec les enrôlements liés au concours
+    /**
+     * Relation avec les enrôlements liés au concours
+     */
     public function enrolements()
     {
         return $this->hasMany(Enrolement::class);

@@ -9,10 +9,21 @@ class Departement extends Model
 {
     protected $fillable = [
         'nom_departement',
-        'description'
+        'description',
+        'ecole_id'
     ];
 
-    // Relation avec les filières du département
+    /**
+     * Relation avec l'école
+     */
+    public function ecole()
+    {
+        return $this->belongsTo(Ecole::class);
+    }
+
+    /**
+     * Relation avec les filières du département
+     */
     public function filieres()
     {
         return $this->hasMany(Filiere::class);

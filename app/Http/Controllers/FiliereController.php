@@ -19,7 +19,7 @@ class FiliereController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $filieres = Filiere::with('departement')->withCount('candidats')->get();
+            $filieres = Filiere::with(['ecole', 'departement'])->withCount('candidats')->get();
             return response()->json([
                 'success' => true,
                 'data' => $filieres
@@ -36,7 +36,7 @@ class FiliereController extends Controller
     public function show($id): JsonResponse
     {
         try {
-            $filiere = Filiere::with('departement', 'candidats')->findOrFail($id);
+            $filiere = Filiere::with(['ecole', 'departement', 'candidats'])->findOrFail($id);
             return response()->json([
                 'success' => true,
                 'data' => $filiere
